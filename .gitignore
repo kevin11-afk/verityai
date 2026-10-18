@@ -31,3 +31,7 @@ htmlcov/
 
 # Evaluation outputs that contain run-specific numbers
 scripts/eval_results/
+
+# Local evaluation datasets (downloaded samples; never commit)
+data/eval/
+data/eval_sets/

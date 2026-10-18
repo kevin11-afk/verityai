@@ -182,6 +182,9 @@ generation/serialization.
 
 ## Evaluation instructions
 
+A first measurement (200 images, AUC ≈ 0.85) and a comparison with three
+other detectors are in `EVALUATION.md`, with reproduction commands.
+
 `scripts/evaluate.py` prints **real, computed metrics only** — it prints
 "Not evaluated" for anything it has no labeled data for, rather than a
 placeholder number.

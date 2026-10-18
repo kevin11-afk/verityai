@@ -180,10 +180,13 @@ a fresh venv installed from `requirements.txt`, all free/local, ₹0.
 7. Added `--extra-index-url` for CPU torch to `requirements.txt` for Linux hosts.
 
 **Still incomplete or unverified**
-- **Detector accuracy is unmeasured and looks poor.** Two real sample photos were labeled "AI-generated suspected" (0.70, 0.97) and a noise image 0.65. Treat the detector as unvalidated. Run `scripts/evaluate.py` on a labeled set (e.g. CIFAKE, with its caveats) before making any claim, and consider whether the 0.65 thresholds or the model need to change.
+- **Detector accuracy is moderate**, now measured (see `EVALUATION.md`): AUC 0.85 and ~77% accuracy on 200 images from one dataset, with ~21% of real photos flagged as AI at the 0.65 policy. The detector and thresholds were kept after comparing three other models and a split-half threshold check. The sample is small, so treat the numbers as indicative.
 - Retrieval quality is unmeasured (no `rag_eval.jsonl`).
 - Downloaded JSON/Markdown report files were not opened (the buttons render).
 - Video was tested only on a synthetic MP4 built from still photos.
 - Streamlit Community Cloud: **not deployed, and the deployment config is untested there.** Unverified: the CPU torch wheel being selected, the RAM limit (peak ~540 MB locally for models, excluding Streamlit), and cold-start time.
 - Cosmetic: retrieved quotes show raw Markdown `#` headings; video explanation text says "this image".
 - A secondary `pytest` DeprecationWarning from chromadb/pydantic (harmless).
+
+## Update: detector evaluation
+Added `EVALUATION.md`, `scripts/fetch_eval_data.py`, `scripts/compare_detectors.py`, `scripts/normalize_eval_set.py`; `scripts/evaluate.py` now takes an optional image-directory argument. Evaluation data goes in `data/eval_sets/` (git-ignored). RAG retrieval quality is still unmeasured.

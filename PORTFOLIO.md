@@ -45,10 +45,10 @@ checks — not claims.
 
 **Update 2026-10-18 (macOS arm64, Python 3.11.15):** the items marked ✅
 above were run on a real install. Bugs found and fixed in that pass are
-listed in `TRANSFER.md`. **Detector accuracy has not been measured**: on
-three stock photos from scikit-learn's sample set, the detector labeled
-all as "AI-generated suspected" (0.70 and 0.97 for two real photos), so
-expect false positives until it is evaluated on labeled data.
+listed in `TRANSFER.md`. **Detector accuracy was first measured on
+2026-10-18 on a 200-image sample** (AUC 0.85, ~77% accuracy, ~21% of real
+photos flagged as AI): see `EVALUATION.md`. Quote those numbers only with
+their caveats; the sample is small and single-dataset.
 
 ## Two-minute demo script
 

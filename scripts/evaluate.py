@@ -26,7 +26,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src import config  # noqa: E402
 
-EVAL_IMAGE_DIR = config.PROJECT_ROOT / "data" / "eval" / "images"
+# Optional first CLI argument overrides the labeled-image directory, e.g.
+#   python scripts/evaluate.py data/eval_sets/raw_real_fake_images
+EVAL_IMAGE_DIR = (
+    Path(sys.argv[1]).resolve() if len(sys.argv) > 1
+    else config.PROJECT_ROOT / "data" / "eval" / "images"
+)
 RAG_EVAL_FILE = config.PROJECT_ROOT / "data" / "eval" / "rag_eval.jsonl"
 
 
@@ -75,7 +80,7 @@ def evaluate_detector() -> None:
         print(f"Not evaluated: no readable images found under {EVAL_IMAGE_DIR}")
         return
 
-    print(f"Evaluated {n} image(s) ({errors and len(errors)} error(s)).")
+    print(f"Evaluated {n} image(s) ({len(errors)} error(s)).")
     print(f"Precision: {precision_score(y_true, y_pred, zero_division=0):.4f}")
     print(f"Recall:    {recall_score(y_true, y_pred, zero_division=0):.4f}")
     print(f"F1:        {f1_score(y_true, y_pred, zero_division=0):.4f}")
