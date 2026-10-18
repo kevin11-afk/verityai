@@ -11,6 +11,7 @@ import streamlit as st
 from src import config
 from src.rag.generation import answer_research_question
 from src.rag.retrieval import HybridRetriever
+from src.rag.bootstrap import ensure_index_built
 from src.rag.vector_store import VectorStore
 
 st.set_page_config(page_title=f"{config.APP_NAME} — Research Assistant", page_icon="📚", layout="wide")
@@ -24,6 +25,7 @@ st.caption(
 @st.cache_resource(show_spinner=False)
 def _get_store_and_retriever():
     store = VectorStore()
+    ensure_index_built(store)
     if store.count() == 0:
         return store, None
     return store, HybridRetriever(store)

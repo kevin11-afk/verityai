@@ -154,3 +154,36 @@ Then:
    test the public URL before calling it deployed.
 10. Optionally, add labeled data to `data/eval/` and run
     `python scripts/evaluate.py`.
+
+---
+
+## Update 2026-10-18: first real-environment verification
+
+Environment: macOS arm64, Python 3.11.15 (via `uv venv --python 3.11`),
+a fresh venv installed from `requirements.txt`, all free/local, ₹0.
+
+**Verified by running it**
+- Clean-room install from `requirements.txt` alone, then `pytest`: **40 passed, 0 skipped** (retrieval tests now run).
+- `Nahrawy/AIorNot` downloaded and loaded; `id2label = {0: 'real', 1: 'ai'}`, so risk #1 above is cleared.
+- Real inference on three sample photos, a noise image, and an 8-frame video sample.
+- `ingest_documents.py`: 37 chunks indexed with real embeddings; ChromaDB + BM25 + RRF return results with both ranks populated.
+- Streamlit app: Home, About, Evaluation, Video, Image, and Research Assistant pages loaded without exceptions. Image Analysis, Video Analysis, and Research Assistant were exercised through the browser. Files were injected into the uploader by script rather than with a real file picker.
+- `scripts/evaluate.py` runs and correctly prints "Not evaluated".
+
+**Bugs found and fixed (branch `fix/real-env-setup`)**
+1. The pipeline applied an independent **sigmoid**, not softmax, so scores didn't sum to 1 and contradicted the documented policy. Fixed with `function_to_apply="softmax"` in `src/detector/image_detector.py`. Decision-policy outcomes change as a result.
+2. `st.image(use_container_width=...)` isn't supported by pinned Streamlit 1.39, which crashed Image Analysis on every upload. Now `use_column_width`.
+3. BM25 filter `score > 0` dropped real keyword matches on small corpora, because rank_bm25's IDF is ≤ 0 for terms in about half the documents. Now filters on token overlap.
+4. A retrieval test was non-deterministic: it used Python's per-process `hash()` for fake embeddings. Now uses `zlib.crc32`.
+5. chromadb 0.5.5 telemetry broke with posthog ≥ 6 and logged errors on every call. Pinned `posthog==5.4.0` and disabled telemetry.
+6. A fresh deploy had no index (`chroma_db/` is gitignored). Added `src/rag/bootstrap.py`, which builds it on first start. It has a unit test.
+7. Added `--extra-index-url` for CPU torch to `requirements.txt` for Linux hosts.
+
+**Still incomplete or unverified**
+- **Detector accuracy is unmeasured and looks poor.** Two real sample photos were labeled "AI-generated suspected" (0.70, 0.97) and a noise image 0.65. Treat the detector as unvalidated. Run `scripts/evaluate.py` on a labeled set (e.g. CIFAKE, with its caveats) before making any claim, and consider whether the 0.65 thresholds or the model need to change.
+- Retrieval quality is unmeasured (no `rag_eval.jsonl`).
+- Downloaded JSON/Markdown report files were not opened (the buttons render).
+- Video was tested only on a synthetic MP4 built from still photos.
+- Streamlit Community Cloud: **not deployed, and the deployment config is untested there.** Unverified: the CPU torch wheel being selected, the RAM limit (peak ~540 MB locally for models, excluding Streamlit), and cold-start time.
+- Cosmetic: retrieved quotes show raw Markdown `#` headings; video explanation text says "this image".
+- A secondary `pytest` DeprecationWarning from chromadb/pydantic (harmless).

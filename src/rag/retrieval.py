@@ -43,6 +43,7 @@ class HybridRetriever:
         self._bm25_chunk_ids: List[str] = []
         self._bm25_metadata = {}
         self._bm25_texts = {}
+        self._bm25_token_sets: List[set] = []
         self._build_bm25_index()
 
     def _build_bm25_index(self) -> None:
@@ -62,6 +63,7 @@ class HybridRetriever:
             return
 
         tokenized_corpus = [_tokenize(doc) for doc in documents]
+        self._bm25_token_sets = [set(t) for t in tokenized_corpus]
         self._bm25 = BM25Okapi(tokenized_corpus)
 
     def refresh(self) -> None:
@@ -71,9 +73,18 @@ class HybridRetriever:
     def _bm25_ranked_ids(self, query: str, top_k: int) -> List[str]:
         if self._bm25 is None:
             return []
-        scores = self._bm25.get_scores(_tokenize(query))
-        ranked = sorted(zip(self._bm25_chunk_ids, scores), key=lambda x: x[1], reverse=True)
-        return [cid for cid, score in ranked[:top_k] if score > 0]
+        query_tokens = set(_tokenize(query))
+        scores = self._bm25.get_scores(list(query_tokens))
+        # Require real token overlap rather than score > 0: BM25Okapi's IDF is
+        # 0 (or negative) for terms present in about half the corpus or more,
+        # which would wrongly discard genuine keyword matches in small corpora.
+        candidates = [
+            (cid, score)
+            for cid, score, tokens in zip(self._bm25_chunk_ids, scores, self._bm25_token_sets)
+            if query_tokens & tokens
+        ]
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        return [cid for cid, _ in candidates[:top_k]]
 
     def _vector_ranked_ids(self, query: str, top_k: int) -> List[str]:
         if self._store.count() == 0:

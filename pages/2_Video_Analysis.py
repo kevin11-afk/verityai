@@ -18,6 +18,7 @@ from src.detector.base import DetectorError
 from src.detector.video_analyzer import analyze_video, validate_video_file
 from src.rag.generation import generate_explanation
 from src.rag.retrieval import HybridRetriever
+from src.rag.bootstrap import ensure_index_built
 from src.rag.vector_store import VectorStore
 
 st.set_page_config(page_title=f"{config.APP_NAME} — Video Analysis", page_icon="🎞️", layout="wide")
@@ -35,6 +36,7 @@ st.warning(
 def _get_retriever() -> HybridRetriever | None:
     try:
         store = VectorStore()
+        ensure_index_built(store)
         if store.count() == 0:
             return None
         return HybridRetriever(store)

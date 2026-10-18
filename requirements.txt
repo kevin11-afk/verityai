@@ -4,6 +4,11 @@
 # (install separately first — see README "Installation" — pip's own
 # dependency resolver does not reliably pick the +cpu wheel on all platforms).
 
+# CPU-only torch wheels on Linux hosts (e.g. Streamlit Community Cloud); without
+# this, pip's default Linux wheel pulls the multi-GB CUDA build. On macOS the
+# normal PyPI wheel is already CPU/MPS-only and this index is harmless.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 streamlit==1.39.0
 
 # Detector
@@ -15,6 +20,7 @@ opencv-python-headless==4.10.0.84
 # RAG
 sentence-transformers==3.0.1
 chromadb==0.5.5
+posthog==5.4.0  # chromadb 0.5.5's telemetry breaks with posthog>=6
 rank-bm25==0.2.2
 pymupdf==1.24.10
 

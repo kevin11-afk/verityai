@@ -8,20 +8,20 @@ without having run it.
 
 | Feature | Code written | Verified running |
 |---|---|---|
-| Image upload, validation, preview | ✅ | ⬜ (pending `pip install` + `streamlit run` on your Mac) |
-| Real detector inference (Nahrawy/AIorNot) | ✅ | ⬜ |
+| Image upload, validation, preview | ✅ | ✅ (run in the live app on macOS, 2026-10-18) |
+| Real detector inference (Nahrawy/AIorNot) | ✅ | ✅ (real weights; labels `real`/`ai`; accuracy NOT validated) |
 | Decision policy / categories | ✅ | ✅ (logic unit-tested with mocked scores, passed) |
-| Downloadable JSON/Markdown report | ✅ | ⬜ |
-| Video frame extraction + per-frame detection | ✅ | ⬜ |
+| Downloadable JSON/Markdown report | ✅ | ◑ (buttons render; downloaded file contents not opened) |
+| Video frame extraction + per-frame detection | ✅ | ✅ (one generated 4 s MP4; not a real-video test) |
 | RAG ingestion (PDF/TXT/MD + chunking + metadata) | ✅ | ✅ (chunking/metadata unit-tested, passed) |
-| ChromaDB vector store | ✅ | ⬜ (needs `chromadb` installed) |
-| BM25 keyword search | ✅ | ⬜ (needs `rank-bm25` installed) |
-| Hybrid retrieval (RRF) | ✅ | ⬜ |
+| ChromaDB vector store | ✅ | ✅ (37 chunks, real embeddings) |
+| BM25 keyword search | ✅ | ✅ |
+| Hybrid retrieval (RRF) | ✅ | ✅ (vector and BM25 ranks both populated; recall not measured) |
 | Evidence-grounded explanation templates | ✅ | ✅ (grounding/citation logic unit-tested, passed) |
 | 6 seed knowledge-base documents, real citations | ✅ | — (fact-checked against live sources during writing) |
-| Streamlit UI — all 6 pages | ✅ | ⬜ (needs `streamlit` installed) |
-| Tests (`tests/`) | ✅ | Partial — see below |
-| Evaluation script | ✅ | ⬜ (needs a labeled eval set you supply) |
+| Streamlit UI — all 6 pages | ✅ | ✅ (all load; Image, Video, Research flows exercised) |
+| Tests (`tests/`) | ✅ | ✅ (40 passed, 0 skipped, Python 3.11) |
+| Evaluation script | ✅ | ◑ (runs and prints "Not evaluated"; no labeled data) |
 | GitHub push | ⬜ | ⬜ |
 | Streamlit Community Cloud deployment | ⬜ | ⬜ |
 
@@ -42,6 +42,13 @@ thresholds, text chunking and citation-metadata preservation, report
 JSON/Markdown generation, and the evidence-grounding logic (no LLM
 hallucination path exists — there is no LLM). These are real, run, passing
 checks — not claims.
+
+**Update 2026-10-18 (macOS arm64, Python 3.11.15):** the items marked ✅
+above were run on a real install. Bugs found and fixed in that pass are
+listed in `TRANSFER.md`. **Detector accuracy has not been measured**: on
+three stock photos from scikit-learn's sample set, the detector labeled
+all as "AI-generated suspected" (0.70 and 0.97 for two real photos), so
+expect false positives until it is evaluated on labeled data.
 
 ## Two-minute demo script
 

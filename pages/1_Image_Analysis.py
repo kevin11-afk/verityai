@@ -18,6 +18,7 @@ from src.detector.base import DetectorError
 from src.detector.image_detector import predict_image
 from src.rag.generation import generate_explanation
 from src.rag.retrieval import HybridRetriever
+from src.rag.bootstrap import ensure_index_built
 from src.rag.vector_store import VectorStore
 
 st.set_page_config(page_title=f"{config.APP_NAME} — Image Analysis", page_icon="🖼️", layout="wide")
@@ -32,6 +33,7 @@ st.caption(
 def _get_retriever() -> HybridRetriever | None:
     try:
         store = VectorStore()
+        ensure_index_built(store)
         if store.count() == 0:
             return None
         return HybridRetriever(store)
@@ -55,7 +57,7 @@ validation_result = validation.validate_image_bytes(file_bytes, uploaded.name)
 
 col_preview, col_status = st.columns([1, 1])
 with col_preview:
-    st.image(file_bytes, caption=uploaded.name, use_container_width=True)
+    st.image(file_bytes, caption=uploaded.name, use_column_width=True)
 
 with col_status:
     if not validation_result.ok:

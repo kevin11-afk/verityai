@@ -95,7 +95,7 @@ def test_predict_image_mocked():
         Image.new("RGB", (16, 16)).save(path)
         mock_output = [{"label": "ai", "score": 0.77}, {"label": "real", "score": 0.23}]
         with patch("src.detector.image_detector._load_pipeline") as mock_load:
-            mock_load.return_value = lambda img: mock_output
+            mock_load.return_value = lambda img, **kw: mock_output
             from src.detector.image_detector import predict_image
             result = predict_image(path)
         assert result.category == ResultCategory.AI_GENERATED_SUSPECTED

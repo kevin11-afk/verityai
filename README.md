@@ -114,9 +114,9 @@ be a calibrated probability of authenticity.
 
 ## Installation
 
-Requires **Python 3.10–3.11** (newer and older versions have had patchier
-PyTorch/ChromaDB wheel availability at various times — check before
-deviating). Tested target: macOS (Apple Silicon), 8GB RAM.
+Requires **Python 3.11** (tested on 3.11.15, macOS arm64; 3.10 should work; 3.12+ is untested
+with the pinned `torch`/`chromadb`/`numpy` versions). Install 3.11 free with
+`uv python install 3.11` or `brew install python@3.11`.
 
 ```bash
 git clone <your-repo-url> verityai
@@ -175,14 +175,10 @@ production app**), chunking and citation-metadata preservation, BM25 and
 vector and hybrid (RRF) retrieval, missing-evidence handling, and report
 generation/serialization.
 
-> **Note on this sandbox:** these tests were written and, where possible,
-> smoke-tested logic-only (no network) during development — see the
-> commit history / development notes. The full suite (which needs
-> chromadb, rank-bm25, torch, transformers, sentence-transformers actually
-> installed) should be run with `pytest tests/ -v` after `pip install -r
-> requirements.txt` on a machine with internet access, before you rely on
-> this project for a portfolio demo or submission. Report any failures —
-> they're real bugs to fix, not expected.
+> **Status:** the full suite (40 tests, including retrieval against real
+> ChromaDB and BM25) passes on Python 3.11 / macOS arm64 from a clean
+> install of `requirements.txt`. Mocks are used only for the model in unit
+> tests; see `TRANSFER.md` for what was and wasn't verified end to end.
 
 ## Evaluation instructions
 
@@ -228,14 +224,20 @@ app, apps sleep after ~12 hours without traffic.
    public-app allowance applies).
 2. Go to [share.streamlit.io](https://share.streamlit.io), sign in with
    GitHub, and click "New app."
-3. Select this repo, branch `main`, main file path `app.py`.
+3. Select this repo, branch `main`, main file path `app.py`. Under
+   **Advanced settings**, choose **Python 3.11**.
 4. Deploy. First boot will be slow (~a few minutes) while it installs
    dependencies and downloads the two models — this is expected.
 5. **RAM is tight at ~1GB.** If the app crashes or is OOM-killed on
    first load:
-   - Confirm `requirements.txt` installed the **CPU-only** torch wheel
-     (add a `packages.txt`/build step or a `constraints.txt` pinning the
-     `+cpu` wheel if Streamlit Cloud doesn't pick it up automatically).
+   - `requirements.txt` already carries `--extra-index-url
+     https://download.pytorch.org/whl/cpu` so Linux hosts should get the
+     CPU-only torch wheel. This has **not** been verified on Streamlit
+     Cloud; check the build log for a `+cpu` torch and, if the CUDA build
+     was installed instead, pin `torch==2.4.1+cpu` there.
+   - Measured locally (macOS arm64): detector + embedder + ChromaDB peak at
+     ~540 MB RSS before Streamlit's own overhead. That is under 1 GB but
+     with limited headroom; Linux numbers are unmeasured.
    - As a fallback, disable video analysis on the hosted deployment (it
      loads no extra model, but running multiple frames back-to-back adds
      latency) by setting an environment variable the pages check, or
@@ -250,11 +252,9 @@ app, apps sleep after ~12 hours without traffic.
    at least one cited passage appear, and ask a question on Research
    Assistant. Do not claim the app is "deployed and working" until you've
    done this.
-7. The knowledge-base index (`chroma_db/`) is built at deploy time by
-   adding a one-line startup check, or by committing a pre-built index —
-   committing the pre-built `chroma_db/` directory is simplest for a
-   small, static knowledge base like this project's starter set (remove
-   it from `.gitignore` if you do this).
+7. The knowledge-base index (`chroma_db/`) is built automatically on first
+   start if it is empty (`src/rag/bootstrap.py`, ~30 s the first time as
+   the embedding model downloads). No pre-built index needs to be committed.
 
 ## Privacy and security notes
 

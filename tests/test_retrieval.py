@@ -17,6 +17,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import zlib
+
 import numpy as np
 import pytest
 
@@ -33,7 +35,7 @@ def _fake_embed(texts):
     sentences, without downloading a real model."""
     vectors = []
     for text in texts:
-        rng = np.random.default_rng(abs(hash(text)) % (2**32))
+        rng = np.random.default_rng(zlib.crc32(text.encode()) % (2**32))
         vectors.append(rng.random(16).astype(np.float32))
     return np.array(vectors, dtype=np.float32)
 
@@ -112,8 +114,12 @@ class TestHybridRetrieval:
             results = retriever.retrieve("frequency-domain artifacts diffusion", top_k=2)
 
         assert len(results) > 0
-        assert results[0].chunk_id == "a"
-        assert results[0].bm25_rank == 1
+        # Vector ranking from the fake embedding is arbitrary, so only the
+        # BM25 side is asserted: the keyword-matching chunk must rank first there.
+        by_id = {r.chunk_id: r for r in results}
+        assert "a" in by_id
+        assert by_id["a"].bm25_rank == 1
+        assert by_id["b"].bm25_rank is None if "b" in by_id else True
 
     def test_citation_metadata_survives_retrieval(self, vector_store):
         chunk = Chunk("c1", "Some evidence text.", "My Title", "https://example.com/src", 7, "doc.pdf")
@@ -153,3 +159,18 @@ class TestHybridRetrieval:
         # both chunk_ids with populated rrf_score.
         assert {r.chunk_id for r in results} == {"both", "bm25_only"}
         assert all(r.rrf_score > 0 for r in results)
+
+
+class TestBootstrap:
+    def test_ensure_index_built_indexes_once_when_empty(self, vector_store, tmp_path, monkeypatch):
+        from src import config
+        from src.rag.bootstrap import ensure_index_built
+
+        kb = tmp_path / "kb"
+        kb.mkdir()
+        (kb / "doc.md").write_text("# Title\n\nDiffusion models leave frequency artifacts.")
+        monkeypatch.setattr(config, "KNOWLEDGE_BASE_DIR", kb)
+        with patch("src.rag.vector_store.embed_texts", side_effect=_fake_embed):
+            added = ensure_index_built(vector_store)
+            assert added > 0 and vector_store.count() == added
+            assert ensure_index_built(vector_store) == 0  # no-op when already populated

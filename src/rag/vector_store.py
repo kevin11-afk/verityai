@@ -15,10 +15,18 @@ from src.rag.embeddings import embed_texts
 
 class VectorStore:
     def __init__(self, persist_directory=None, collection_name: Optional[str] = None):
+        import os
+
+        # chromadb 0.5.x's telemetry client is incompatible with current posthog
+        # and logs errors on every call; telemetry is off for privacy anyway.
+        os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
         import chromadb
 
         self._persist_directory = str(persist_directory or config.CHROMA_DB_DIR)
-        self._client = chromadb.PersistentClient(path=self._persist_directory)
+        self._client = chromadb.PersistentClient(
+            path=self._persist_directory,
+            settings=chromadb.Settings(anonymized_telemetry=False),
+        )
         self._collection_name = collection_name or config.CHROMA_COLLECTION_NAME
         # cosine distance matches normalized sentence-embedding similarity
         self._collection = self._client.get_or_create_collection(

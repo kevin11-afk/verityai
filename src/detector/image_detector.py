@@ -94,7 +94,10 @@ def predict_image(image_path: Union[str, Path]) -> DetectionResult:
         from PIL import Image
         with Image.open(image_path) as img:
             img = img.convert("RGB")
-            raw_predictions = clf(img)
+            # Explicit softmax: left to its default, the pipeline applied an
+            # independent sigmoid to this model's logits (scores did not sum
+            # to 1), contradicting the documented decision policy.
+            raw_predictions = clf(img, function_to_apply="softmax")
     except Exception as exc:  # noqa: BLE001
         raise DetectorError(f"Inference failed on '{image_path}': {exc}") from exc
     latency_ms = (time.perf_counter() - start) * 1000

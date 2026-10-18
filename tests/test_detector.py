@@ -62,7 +62,7 @@ class TestPredictImageMockedPipeline:
         mock_output = [{"label": "ai", "score": 0.82}, {"label": "real", "score": 0.18}]
 
         with patch("src.detector.image_detector._load_pipeline") as mock_load:
-            mock_load.return_value = lambda img: mock_output
+            mock_load.return_value = lambda img, **kw: mock_output
             from src.detector.image_detector import predict_image
             result = predict_image(img_path)
 
@@ -91,7 +91,7 @@ class TestPredictImageMockedPipeline:
         bad_path.write_bytes(b"not an image")
 
         with patch("src.detector.image_detector._load_pipeline") as mock_load:
-            mock_load.return_value = lambda img: [{"label": "ai", "score": 1.0}]
+            mock_load.return_value = lambda img, **kw: [{"label": "ai", "score": 1.0}]
             from src.detector.image_detector import predict_image
             with pytest.raises(DetectorError):
                 predict_image(bad_path)
