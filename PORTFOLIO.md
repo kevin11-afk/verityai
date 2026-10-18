@@ -50,6 +50,15 @@ listed in `TRANSFER.md`. **Detector accuracy was first measured on
 photos flagged as AI): see `EVALUATION.md`. Quote those numbers only with
 their caveats; the sample is small and single-dataset.
 
+## Product UI (React + FastAPI), branch `feature/premium-react-frontend`
+
+| Feature | Code written | Verified |
+|---|---|---|
+| FastAPI backend (health, analysis, reports, research, KB, evaluation) | ✅ | ✅ 24/24 real-model checks, 15 API tests |
+| React app: Overview, Analyze, Report, Reports, Research, Knowledge, Evaluation lab, Methodology | ✅ | ✅ in a real browser against the real API, incl. mobile |
+| Evaluation artifacts (detector ROC/PR/calibration/CI, RAG Hit@k/MRR/abstention) | ✅ | ✅ computed from real scores |
+| Deployment of the new UI | config written | ⬜ not deployed; Streamlit Cloud `st.App` route untested on Cloud |
+
 ## Two-minute demo script
 
 1. **(0:00–0:15)** "This is VerityAI — a screening tool for AI-generated
