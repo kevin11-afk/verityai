@@ -17,7 +17,80 @@ which free services and licenses this relies on.
 
 ---
 
+## VerityAI product UI (React + FastAPI)
+
+A full replacement front end for the project, built on the same detector, RAG, ingestion, evaluation
+and report code. The original Streamlit app (`app.py`, `pages/`) is unchanged and still works.
+
+```
+React + TypeScript (web/)  ──HTTP──►  FastAPI (api/)  ──►  src/  (detector, RAG, validation, reports)
+Vite · Tailwind · Recharts            typed schemas            ChromaDB + BM25, Swin-Tiny classifier
+built into product/static             /api/*                   evaluation/*.json (measured artifacts)
+```
+
+Screens: **Overview** (status, recent analyses, measured quality), **Analyze media** (image/video upload
+with progress, model prediction kept separate from retrieved research), **Report** (forensic layout,
+JSON/Markdown/print), **Reports** (searchable history), **Research** (cited answers, source passages,
+retrieval diagnostics, refusals), **Knowledge base** (upload, duplicate detection, confirmed removal and
+re-index, retrieval testing), **Evaluation lab** (ROC, PR, calibration, threshold trade-off, confusion
+matrix, model comparison, dataset breakdown, confidence intervals, CSV/JSON export), and
+**Methodology & privacy**. Nothing on the Evaluation screen is typed in: it reads `evaluation/*.json`,
+produced by `python scripts/export_evaluation.py all` from real scores, and shows "Not evaluated" when
+an artifact is missing.
+
+### Run it locally
+```bash
+# backend (after installing torch and requirements.txt as described under Installation)
+pip install -r requirements-api.txt
+uvicorn api.main:app --port 8000          # API at /api, built web app at http://localhost:8000/product/
+
+# frontend development (hot reload; proxies /api to :8000)
+cd web && npm install && npm run dev      # http://localhost:5173/product/
+cd web && npm run build                   # writes product/static (committed so Streamlit Cloud can serve it)
+```
+API reference: `http://localhost:8000/api/docs`. Main endpoints: `GET /api/health`,
+`POST /api/analyze/image|video`, `GET /api/reports[/{id}[/download?format=json|md]]`,
+`POST /api/research/ask`, `GET|POST /api/kb/documents`, `DELETE /api/kb/documents/{name}?confirm={name}`,
+`POST /api/kb/reindex?confirm=true`, `POST /api/kb/search`, `GET /api/evaluation`.
+Configuration (environment): `VERITYAI_CORS_ORIGINS`, `VERITYAI_PERSISTENCE` (`ephemeral`|`persistent`),
+`VERITYAI_HISTORY_DIR`, `VERITYAI_KB_UPLOAD_DIR`, `VERITYAI_MAX_DISTANCE`.
+
+### What was verified, and how
+| Layer | Check | Result |
+|---|---|---|
+| Python | `pytest tests/` | 80 passed (retrieval, chunking, answers, API, original unit tests) |
+| Python | `python scripts/verify_pipeline.py` (real models) | 26/26 checks |
+| Python | `python scripts/verify_api.py` (real models, every endpoint) | 24/24 checks |
+| Web | `npm run lint`, `typecheck`, `test`, `build` | all clean; 8 unit tests |
+| Web | Real browser, real API (macOS, Python 3.11) | image and video analysis, report page, Research (answer and refusal), Knowledge (upload, duplicate, search, confirmed removal), Evaluation (threshold slider recomputes from samples), Reports, Methodology, mobile 375 px (no horizontal overflow), drawer, deep-link refresh, server-offline behaviour |
+| Hosting | `st.App` entry (`product/server.py`) under Streamlit 1.66, behind a proxy that adds Cloud's `/~/+/` prefix | API, SPA and deep links work locally |
+
+### Hosting at ₹0: what is and is not confirmed
+| Option | Cost | Status |
+|---|---|---|
+| **Second Streamlit Community Cloud app** running `product/server.py` | free | Verified locally only. **Not yet deployed or tested on Cloud**; whether Cloud's proxy passes through custom `st.App` routes is unconfirmed. |
+| Docker (`Dockerfile`) on any host | host-dependent | Written, **never built**. Hugging Face Docker Spaces now need a paid plan to create (per their docs, checked 2026-10-18); free tiers such as Render's (512 MB) are too small for PyTorch. |
+| Firebase Hosting (`firebase.json`) for the static front end | free tier | Config only, **untested**; the API must be hosted elsewhere and allow the site's origin (`VERITYAI_CORS_ORIGINS`), and the build needs `VITE_API_BASE_URL`. |
+
+**Deploy on Streamlit Community Cloud** (does not touch the existing app, which keeps running from `main`):
+1. [share.streamlit.io](https://share.streamlit.io) → **Create app** → repository `kevin11-afk/verityai`, branch
+   `feature/premium-react-frontend` (or `main` after merging), **main file path `product/server.py`**.
+2. **Advanced settings → Python 3.11** (the default is newer and PyTorch 2.4.1 has no wheel for it).
+3. Cloud installs `product/requirements.txt` (the file next to the entry point), not the root one.
+4. Open `https://<your-app>.streamlit.app/`: a small landing page hands off to `…/product/`.
+5. Check: Overview shows "Server online"; analyze an image; ask a research question; open Evaluation.
+   If custom routes are blocked, the landing page loads but the app shows "server unreachable"; in that
+   case run it locally or with Docker, and report back.
+
+Reports and uploaded documents live on the server's disk. On Streamlit Cloud that disk is erased on
+restart, and the interface says so wherever history is shown.
+
+---
+
+*Everything below documents the original Streamlit app and the shared detector / RAG backend.*
+
 ## Table of contents
+- [VerityAI product UI (React + FastAPI)](#verityai-product-ui-react--fastapi)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Tech stack](#tech-stack)
@@ -175,7 +248,7 @@ production app**), chunking and citation-metadata preservation, BM25 and
 vector and hybrid (RRF) retrieval, missing-evidence handling, and report
 generation/serialization.
 
-> **Status:** the full suite (42 tests, including retrieval against real
+> **Status:** the full suite (80 tests, including retrieval against real
 > ChromaDB and BM25) passes on Python 3.11 / macOS arm64 from a clean
 > install of `requirements.txt`. Mocks are used only for the model in unit
 > tests; see `TRANSFER.md` for what was and wasn't verified end to end.
@@ -218,8 +291,9 @@ evaluation now."
 
 ## Deployment (Streamlit Community Cloud)
 
-**Status: not yet deployed.** Everything below the line "Verified locally"
-was run on a Mac; the Cloud steps themselves have never been executed.
+**Status: deployed** at https://verityai.streamlit.app (2026-10-18). Image
+analysis, report download and research retrieval were checked on the live URL;
+video analysis was not. Memory and the torch build on Cloud are unconfirmed.
 
 Free-tier facts (per the Streamlit docs when last checked, 2026-10-18; they
 can change without notice, so re-check): free, GitHub sign-in, no credit
@@ -249,8 +323,11 @@ apps sleep after inactivity. Cloud installs `requirements.txt` with `uv`.
 2. Go to [share.streamlit.io](https://share.streamlit.io), sign in with
    GitHub, click **Create app**, and pick the repo, branch `main`, main file
    `app.py`.
-3. Under **Advanced settings** choose **Python 3.11**. Do not add secrets;
-   none are needed.
+3. Under **Advanced settings** choose **Python 3.11** *before* clicking
+   Deploy. Cloud defaults to the newest Python (3.14 on 2026-10-18), where
+   the pinned `torch==2.4.1` has no wheel and the build fails with "No
+   matching distribution found for torch". If you missed it, delete the app
+   and recreate it. Do not add secrets; none are needed.
 4. Deploy and watch the build log. Confirm that torch installs as `+cpu`
    and that no `nvidia-*` packages appear. If the build fails or the app is
    restarted for memory, check **Manage app → logs**.
@@ -281,6 +358,14 @@ apps sleep after inactivity. Cloud installs `requirements.txt` with `uv`.
   which removes an entire class of prompt-injection risk from documents).
 
 ## Known limitations
+
+- **A modern generator fooled the detector in manual testing**: an image made with ChatGPT's image model
+  was scored 98.5% "Real". The measured numbers in `EVALUATION.md` and the Evaluation lab come from older
+  generators and do not capture this. Treat "Real suspected" as weak evidence.
+- Research retrieval is evaluated on 56 hand-written questions (`evaluation/rag_questions.jsonl`): Hit@1 97.5%,
+  Hit@5 100%, off-topic questions refused 10/10, but only 3 of 6 on-topic-but-uncovered questions are
+  refused, and the labels were written by the same people who read the documents.
+- The ₹0 hosting path for the new UI (a second Streamlit Cloud app) is unconfirmed on Cloud itself.
 
 - **Detector accuracy is moderate** (ROC-AUC ≈ 0.85, ~21% of real photos
   flagged as AI on a 200-image sample; see `EVALUATION.md`).

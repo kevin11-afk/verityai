@@ -1,0 +1,56 @@
+{"id":"q01","category":"answerable","question":"Which paper showed a ResNet-50 trained on a single GAN can spot images from other GANs?","expected_sources":["01_image_detection_methods.md"]}
+{"id":"q02","category":"answerable","question":"How did JPEG compression and blur augmentation help GAN image detection?","expected_sources":["01_image_detection_methods.md"]}
+{"id":"q03","category":"answerable","question":"What artifacts do upsampling layers leave in the Fourier domain?","expected_sources":["01_image_detection_methods.md"]}
+{"id":"q04","category":"answerable","question":"Why are diffusion model images harder to catch with GAN-era detectors?","expected_sources":["01_image_detection_methods.md","02_generalization_and_dataset_bias.md"]}
+{"id":"q05","category":"answerable","question":"What did Corvi and colleagues find about detecting diffusion-generated images?","expected_sources":["01_image_detection_methods.md"]}
+{"id":"q06","category":"answerable","question":"Who proposed frequency analysis for deep fake image recognition?","expected_sources":["01_image_detection_methods.md"]}
+{"id":"q07","category":"answerable","question":"Why does a detector trained on GANs fail on diffusion images?","expected_sources":["02_generalization_and_dataset_bias.md","01_image_detection_methods.md"]}
+{"id":"q08","category":"answerable","question":"What did Ojha, Li and Lee propose to improve generalization to unseen generators?","expected_sources":["02_generalization_and_dataset_bias.md"]}
+{"id":"q09","category":"answerable","question":"Why is the CIFAKE dataset considered a biased benchmark?","expected_sources":["02_generalization_and_dataset_bias.md"]}
+{"id":"q10","category":"answerable","question":"Does accuracy on a held-out set from the same generators predict performance on a brand-new generator?","expected_sources":["02_generalization_and_dataset_bias.md"]}
+{"id":"q11","category":"answerable","question":"How large are CIFAR-10 images and why does that matter for detection benchmarks?","expected_sources":["02_generalization_and_dataset_bias.md"]}
+{"id":"q12","category":"answerable","question":"What advantage do CLIP features with a linear probe have over end-to-end training for fake image detection?","expected_sources":["02_generalization_and_dataset_bias.md"]}
+{"id":"q13","category":"answerable","question":"What is FaceForensics++?","expected_sources":["03_video_and_deepfake_detection.md"]}
+{"id":"q14","category":"answerable","question":"Which manipulation types does FaceForensics++ contain?","expected_sources":["03_video_and_deepfake_detection.md"]}
+{"id":"q15","category":"answerable","question":"What is the difference between frame-level and video-level deepfake detectors?","expected_sources":["03_video_and_deepfake_detection.md"]}
+{"id":"q16","category":"answerable","question":"Can inconsistent scores across video frames prove a video is fake?","expected_sources":["03_video_and_deepfake_detection.md"]}
+{"id":"q17","category":"answerable","question":"Why does video compression matter for deepfake detection accuracy?","expected_sources":["03_video_and_deepfake_detection.md"]}
+{"id":"q18","category":"answerable","question":"What temporal cues can video-level detectors exploit?","expected_sources":["03_video_and_deepfake_detection.md"]}
+{"id":"q19","category":"answerable","question":"Why was Nahrawy/AIorNot chosen as the default detector?","expected_sources":["04_detector_model_cards.md"]}
+{"id":"q20","category":"answerable","question":"How many parameters does the Swin-Tiny model have?","expected_sources":["04_detector_model_cards.md"]}
+{"id":"q21","category":"answerable","question":"Which candidate detector has a non-commercial license?","expected_sources":["04_detector_model_cards.md"]}
+{"id":"q22","category":"answerable","question":"What data was the sdxl-detector trained on?","expected_sources":["04_detector_model_cards.md"]}
+{"id":"q23","category":"answerable","question":"What accuracy does dima806's detector report and why is it misleading?","expected_sources":["04_detector_model_cards.md","02_generalization_and_dataset_bias.md"]}
+{"id":"q24","category":"answerable","question":"What is inconsistent about the license of umm-maybe's AI image detector?","expected_sources":["04_detector_model_cards.md"]}
+{"id":"q25","category":"answerable","question":"What training data does the selected detector use?","expected_sources":["04_detector_model_cards.md"]}
+{"id":"q26","category":"answerable","question":"What does ROC-AUC measure?","expected_sources":["06_evaluation_methodology.md"]}
+{"id":"q27","category":"answerable","question":"Why must threshold tuning data be kept separate from test data?","expected_sources":["06_evaluation_methodology.md"]}
+{"id":"q28","category":"answerable","question":"What is Mean Reciprocal Rank?","expected_sources":["06_evaluation_methodology.md"]}
+{"id":"q29","category":"answerable","question":"What does Recall@K mean for retrieval evaluation?","expected_sources":["06_evaluation_methodology.md"]}
+{"id":"q30","category":"answerable","question":"How is groundedness of an explanation checked?","expected_sources":["06_evaluation_methodology.md"]}
+{"id":"q31","category":"answerable","question":"Why is a confusion matrix worth checking directly?","expected_sources":["06_evaluation_methodology.md"]}
+{"id":"q32","category":"answerable","question":"What are Content Credentials?","expected_sources":["05_content_provenance_c2pa.md"]}
+{"id":"q33","category":"answerable","question":"How does provenance differ from after-the-fact detection?","expected_sources":["05_content_provenance_c2pa.md"]}
+{"id":"q34","category":"answerable","question":"Why might a screenshotted image have no C2PA metadata?","expected_sources":["05_content_provenance_c2pa.md"]}
+{"id":"q35","category":"answerable","question":"Does VerityAI verify C2PA credentials?","expected_sources":["05_content_provenance_c2pa.md"]}
+{"id":"q36","category":"answerable","question":"Is a Real suspected result the same as verified provenance?","expected_sources":["05_content_provenance_c2pa.md"]}
+{"id":"q37","category":"answerable","question":"How can software tell a machine-made picture from a photograph using only the pixels?","expected_sources":["01_image_detection_methods.md"]}
+{"id":"q38","category":"answerable","question":"my detector looks great on its own test set but flops on images from newer image makers, why","expected_sources":["02_generalization_and_dataset_bias.md"]}
+{"id":"q39","category":"answerable","question":"which classifier is small and cheap enough for a modest laptop","expected_sources":["04_detector_model_cards.md"]}
+{"id":"q40","category":"answerable","question":"signed metadata attached when a photo is taken","expected_sources":["05_content_provenance_c2pa.md"]}
+{"id":"u01","category":"unanswerable_in_domain","question":"How does Stable Diffusion's denoising U-Net work internally?","expected_sources":[]}
+{"id":"u02","category":"unanswerable_in_domain","question":"What is the best GPU for training a deepfake detector?","expected_sources":[]}
+{"id":"u03","category":"unanswerable_in_domain","question":"How do invisible watermarks like SynthID embed signals in generated images?","expected_sources":[]}
+{"id":"u04","category":"unanswerable_in_domain","question":"Which laws regulate deepfakes in India?","expected_sources":[]}
+{"id":"u05","category":"unanswerable_in_domain","question":"Which audio deepfake detectors exist for cloned voices?","expected_sources":[]}
+{"id":"u06","category":"unanswerable_in_domain","question":"How many images were used to train Midjourney version 6?","expected_sources":[]}
+{"id":"o01","category":"off_topic","question":"best recipe for chocolate chip cookies","expected_sources":[]}
+{"id":"o02","category":"off_topic","question":"who won the cricket world cup","expected_sources":[]}
+{"id":"o03","category":"off_topic","question":"what is the capital of France","expected_sources":[]}
+{"id":"o04","category":"off_topic","question":"python list comprehension syntax","expected_sources":[]}
+{"id":"o05","category":"off_topic","question":"weather in Mumbai tomorrow","expected_sources":[]}
+{"id":"o06","category":"off_topic","question":"stock market prediction tips","expected_sources":[]}
+{"id":"o07","category":"off_topic","question":"how to fix a leaking tap","expected_sources":[]}
+{"id":"o08","category":"off_topic","question":"how to train a puppy to sit","expected_sources":[]}
+{"id":"o09","category":"off_topic","question":"translate good morning into French","expected_sources":[]}
+{"id":"o10","category":"off_topic","question":"what is 17 times 23","expected_sources":[]}

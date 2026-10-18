@@ -56,3 +56,28 @@ python scripts/fetch_eval_data.py date3k2/raw_real_fake_images --split test --pe
 python scripts/evaluate.py data/eval_sets/raw_real_fake_images
 python scripts/compare_detectors.py data/eval_sets/raw_real_fake_images Nahrawy/AIorNot Organika/sdxl-detector
 ```
+
+
+## Research retrieval (added 2026-10-18)
+`evaluation/rag_questions.jsonl` holds 56 hand-written questions: 40 answerable (with the expected source
+document), 6 on-topic but not covered by the documents, 10 off-topic. `python scripts/export_evaluation.py rag`
+runs them through the real hybrid retriever and writes `evaluation/rag_eval.json`.
+
+| Metric | Result |
+|---|---|
+| Hit@1 / Hit@3 / Hit@5 | 97.5% / 100% / 100% (39/40, 40/40, 40/40) |
+| MRR | 0.988 |
+| Hit@1, BM25-only / vector-only / hybrid | 0.95 / 0.975 / 0.975 (MRR 0.965 / 0.988 / 0.988): hybrid ties vector-only on this set |
+| Off-topic questions refused | 10/10 |
+| On-topic but not covered, refused | 3/6 (weakest area) |
+| Answers whose every claim is verbatim from its cited passage | 56/56 |
+
+The index used is rebuilt from the built-in documents only (6 documents, 28 passages), so the result does not depend on any local uploads.
+
+Caveats: labels are document-level and were written by someone who had read the documents, so wording overlap
+flatters retrieval; 40 questions give wide intervals (see the artifact). The relevance gate was tuned on these
+same questions.
+
+## Detector, manual observation
+A single image generated with ChatGPT's image model was classified "Real" at 98.5% by the production detector. One
+case proves nothing about a rate, but it matches the documented risk that the detector predates modern generators.

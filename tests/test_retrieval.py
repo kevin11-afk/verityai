@@ -186,8 +186,9 @@ class TestRelevanceGate:
             vector_store.add_chunks([chunk])
             retriever = HybridRetriever(vector_store)
             assert retriever.retrieve("Diffusion artifacts evidence.", top_k=3)  # identical text: passes
-            monkeypatch.setattr(config, "MAX_BEST_VECTOR_DISTANCE", -1.0)  # nothing can pass
-            assert retriever.retrieve("Diffusion artifacts evidence.", top_k=3) == []
+            monkeypatch.setattr(config, "MAX_BEST_VECTOR_DISTANCE", -1.0)  # vector gate can never pass
+            # Only one of two query terms occurs in the chunk, so the lexical rescue does not apply.
+            assert retriever.retrieve("Diffusion cookies", top_k=3) == []
 
 
 class TestKnowledgeBaseLoading:
@@ -198,3 +199,58 @@ class TestKnowledgeBaseLoading:
         (tmp_path / "paper.md").write_text("# Paper\n\nContent.")
         names = {d.source_path.name for d in load_knowledge_base_directory(tmp_path)}
         assert names == {"paper.md"}
+
+
+class TestLexicalRescue:
+    def _store_with(self, vector_store, chunks):
+        with patch("src.rag.vector_store.embed_texts", side_effect=_fake_embed):
+            vector_store.add_chunks(chunks)
+
+    def test_key_terms_in_one_chunk_pass_the_gate_even_when_vectors_are_far(self, vector_store, monkeypatch):
+        from src import config
+        from src.rag.retrieval import HybridRetriever
+
+        self._store_with(vector_store, [
+            Chunk("m", "Mean Reciprocal Rank averages the inverse rank of the first relevant passage.", "Metrics", None, None, "m.md"),
+            Chunk("o", "Cats and dogs are common household pets.", "Pets", None, None, "o.md"),
+        ])
+        monkeypatch.setattr(config, "MAX_BEST_VECTOR_DISTANCE", -1.0)  # vector gate can never pass
+        with patch("src.rag.vector_store.embed_texts", side_effect=_fake_embed):
+            passages, diag = HybridRetriever(vector_store).retrieve_with_diagnostics("What is Mean Reciprocal Rank?", 3)
+        assert not diag.abstained and diag.gate_passed_by == "lexical" and diag.lexical_coverage == 1.0
+        assert passages and passages[0].source_file == "m.md"
+
+    def test_single_or_partial_term_overlap_does_not_pass(self, vector_store, monkeypatch):
+        from src import config
+        from src.rag.retrieval import HybridRetriever
+
+        self._store_with(vector_store, [
+            Chunk("m", "Mean Reciprocal Rank averages the inverse rank of the first relevant passage.", "Metrics", None, None, "m.md"),
+        ])
+        monkeypatch.setattr(config, "MAX_BEST_VECTOR_DISTANCE", -1.0)
+        retriever = HybridRetriever(vector_store)
+        with patch("src.rag.vector_store.embed_texts", side_effect=_fake_embed):
+            for q in ("rank", "best recipe for chocolate chip cookies rank", "What is 17 times 23"):
+                _, diag = retriever.retrieve_with_diagnostics(q, 3)
+                assert diag.abstained and diag.gate_passed_by is None
+
+
+class TestWeakPassageFilter:
+    def test_neighbours_supported_by_neither_retriever_are_dropped(self, vector_store, monkeypatch):
+        from src import config
+        from src.rag.retrieval import HybridRetriever
+
+        chunks = [
+            Chunk("hit", "Marmots whistle across alpine meadows to warn colony members of danger.", "M", None, None, "m.md"),
+            Chunk("far1", "Quarterly revenue forecasts depend on seasonal purchasing behaviour.", "R", None, None, "r1.md"),
+            Chunk("far2", "Bridge engineers inspect steel cables for corrosion every spring.", "B", None, None, "r2.md"),
+        ]
+        with patch("src.rag.vector_store.embed_texts", side_effect=_fake_embed):
+            vector_store.add_chunks(chunks)
+            retriever = HybridRetriever(vector_store)
+            monkeypatch.setattr(config, "MAX_BEST_VECTOR_DISTANCE", 0.35)
+            passages, diag = retriever.retrieve_with_diagnostics("marmots whistle alpine meadows", top_k=5)
+        ids = [p.chunk_id for p in passages]
+        assert ids[0] == "hit"
+        assert all(p.bm25_rank is not None or (p.vector_distance is not None and p.vector_distance <= 0.35) for p in passages)
+        assert diag.weak_filtered >= 0 and len(ids) <= 3

@@ -1,13 +1,51 @@
 # VerityAI: handoff and status
 
-Last updated 2026-10-18. This records what was actually run, not what is
-intended. Companion docs: `README.md` (setup, deployment), `EVALUATION.md`
-(detector accuracy), `PORTFOLIO.md` (feature checklist).
+Last updated 2026-10-18. This records what was actually run, not what is intended.
+Companion docs: `README.md`, `EVALUATION.md`, `PORTFOLIO.md`.
 
-**Bottom line:** the app works end to end locally on macOS. It is **not
-deployed**, the Streamlit Cloud steps have never been run, and detector
-accuracy is only moderate. It is ready to attempt a free deployment, with the
-caveats in "Remaining issues".
+**Bottom line**
+- The original Streamlit app is **deployed and working** at https://verityai.streamlit.app (from `main`; verified
+  on the live URL: image analysis, report download, research, off-topic refusal).
+- A **new product UI (React + TypeScript + FastAPI)** is built and verified locally on branch
+  `feature/premium-react-frontend`. It is **not deployed anywhere**, and the free-hosting route for it (a second
+  Streamlit Community Cloud app running `product/server.py`) has been tested only locally, including behind a
+  proxy that mimics Cloud's `/~/+/` URL prefix. Whether Cloud itself passes the custom routes through is unknown.
+- Detector accuracy is moderate and a modern generator was missed in manual testing (see Remaining issues).
+
+## New product UI: what exists
+`api/` (FastAPI, typed Pydantic schemas) wraps the existing `src/` code; `web/` is the React app; `product/static`
+is its committed build; `evaluation/*.json` are measured artifacts the Evaluation lab reads; `product/server.py`
+is the `st.App` entry for Streamlit Cloud; `Dockerfile` and `firebase.json` are alternative hosting configs.
+
+## Verification run (macOS arm64, Python 3.11.15, Node 22)
+| Check | Result |
+|---|---|
+| `pytest tests/` | **80 passed** |
+| `python scripts/verify_pipeline.py` (real models) | **26/26** |
+| `python scripts/verify_api.py` (real models, every endpoint) | **24/24** |
+| `npm run lint` / `typecheck` / `test` / `build` | clean; 8 unit tests |
+| `npm audit --omit=dev` | 0 vulnerabilities (7 dev-only advisories remain, all in Tailwind 3's build-time glob chain; the fix is a Tailwind 4 migration, not done) |
+| Browser, real API | image + video analysis, report page, Research (answer and refusal), Knowledge (upload, duplicate, search, confirmed removal), Evaluation (slider recomputes), Reports, Methodology, mobile 375 px, drawer, deep-link refresh, server-offline state |
+| `product/server.py` under Streamlit 1.66, with and without the `/~/+/` prefix proxy | API, SPA, deep links work |
+
+## Bugs found and fixed while building (all with tests)
+1. **Chunker corrupted passages**: its overlap logic duplicated and spliced text (and started chunks mid-word),
+   so "verbatim" quotes could be spliced sentences. Replaced with a sentence-aware chunker; chunks are now
+   contiguous source text. Persisted indexes carry a chunker version (sidecar file) and rebuild when stale.
+2. **Relevance gate refused short keyword questions** ("What is Mean Reciprocal Rank?"). Added a lexical rescue
+   (two or more key terms together in one passage); Hit@1 rose from 90% to 97.5% on the labeled set (measured before the later chunker fix; final figures are in EVALUATION.md).
+3. **Rank fusion was nondeterministic** (ties broken by Python set order), which changed metrics between runs.
+4. Weakly related passages padded result lists; passages supported by neither retriever are now dropped.
+5. The API schema silently dropped new diagnostics fields (Pydantic ignores extras); pinned by a test.
+6. Extractive answers used headings, fragments and bibliography lines as "claims"; rewritten and tested.
+7. An unloadable lazy page chunk blanked the whole app; added an error boundary.
+8. Smaller: buttons nested in links, "Ai" capitalisation, Retry shown for non-retryable errors, truncated stats.
+
+## Hosting reality (checked 2026-10-18)
+Hugging Face Docker Spaces now require a paid plan to create; Render/Koyeb free tiers (512 MB) cannot hold PyTorch;
+Cloud Run needs a billing account. The only ₹0 option with enough RAM that is already proven for this stack is
+Streamlit Community Cloud, hence the `st.App` route. Docker and Firebase configs exist but were never executed
+(neither Docker nor the Firebase CLI was available here).
 
 ## Provenance
 Built in a network-less cloud sandbox, exported as a Git bundle, and cloned
@@ -16,7 +54,7 @@ TRANSFER.md), then the verification and fix commits on branch
 `fix/real-env-setup`. The default branch in the bundle was `master`; this
 clone renamed it to `main`.
 
-## Test results (macOS arm64, Python 3.11.15, fresh `uv` venv)
+## Earlier verification of the original Streamlit app (before the UI rewrite; superseded by the table above)
 | Check | Result |
 |---|---|
 | `pytest tests/` | **42 passed, 0 skipped** (includes real ChromaDB and BM25 retrieval) |
@@ -91,24 +129,45 @@ the 0.65 policy. Embeddings: `sentence-transformers/all-MiniLM-L6-v2` (CPU).
   wheel in my Linux dry run. The actual Cloud build has not been run.
 - Budget: nothing here uses a paid API, paid hosting, or any billing account.
 
+## Cloud deployment (2026-10-18)
+- **Attempt 1 failed:** build log showed `Using Python 3.14.8`. Python had not
+  been set to 3.11, and `torch==2.4.1` has no wheel for 3.14 (uv and pip both
+  failed). Fix: delete and recreate the app with Advanced settings → Python 3.11.
+- **Attempt 2 succeeded** (Python 3.11 selected). I did not see the build log, so
+  the torch build (`+cpu`) and final memory use are unconfirmed.
+- Verified on the live URL, via the browser pane: home page loads; Research
+  Assistant shows 34 chunks (index auto-built on first start) and returns cited
+  passages for an on-topic question; the off-topic question gets the
+  "insufficient evidence" notice; Image Analysis validated a (canvas-generated)
+  JPEG, ran real inference, showed 5 citations and 2 report buttons, and the
+  JSON report endpoint returned HTTP 200 with correct content.
+- **Not verified on the live URL:** Video Analysis, Evaluation, About, the
+  Markdown report, the saved-file step, sustained use or memory limits, and
+  sleep/wake behavior after inactivity.
+- Note: `curl` to the app URL needs a cookie jar and the health endpoint is not
+  informative behind Cloud's proxy; test in a browser instead.
+
 ## Remaining issues
-1. **Not deployed.** The GitHub push and the Streamlit Cloud build and run are untested.
-2. **Linux and Cloud memory unmeasured.**
-3. **Detector accuracy is moderate.** The evaluation sample is small (200 images) and covers one dataset.
-4. **Retrieval quality unmeasured.** The relevance gate was calibrated on only 18 queries against a 6-document knowledge base.
-5. Saved report files weren't opened from disk; only the served content was checked.
-6. Video was tested on one synthetic clip only.
-7. Cosmetic: retrieved quotes can show raw Markdown `#` headings; the video explanation text says "this image"; pytest shows chromadb/pydantic deprecation warnings.
-8. The dataset used for evaluation states no license. It is kept local and git-ignored.
+1. **The new UI is not deployed.** The `st.App` route on Streamlit Community Cloud is unconfirmed (see README → Hosting). Cloud memory with the full stack (PyTorch + embeddings + FastAPI inside Streamlit) is unmeasured on Linux; locally the old app peaked around 650 MB RSS.
+2. **A modern generator fooled the detector** (ChatGPT image scored 98.5% "Real"). The Evaluation lab's numbers come from older generators and do not reflect this. Fixing it properly needs a modern-generator test set and a model with a commercial-friendly licence that does better; none was found or evaluated yet.
+3. **Detector accuracy is moderate**: ROC-AUC 0.85 (95% CI 0.80–0.90), ~21% of real photos flagged, ~25% of AI images missed, on 200 images from one dataset. The dataset states no licence (scores only are published).
+4. **RAG evaluation is small and self-authored**: 56 questions written by the people who read the documents; document-level labels only; Hit@1 97.5%, Hit@5 100%; 3/6 on-topic-but-uncovered questions are refused. The relevance gate (distance 0.65 plus lexical rescue) was calibrated on this same small set.
+5. Answers are extractive (verbatim sentences). They can be on-topic but not the best sentence, and cannot synthesise across sources.
+6. History and uploaded documents are lost when a host without persistent storage restarts (disclosed in the UI).
+7. No authentication or rate limiting: anyone with the URL can upload files and add or delete knowledge-base documents on a shared instance.
+8. Dev-only npm advisories remain (Tailwind 3 build chain, 7 total). `Dockerfile` and `firebase.json` were never run.
+9. Not tested: real file-picker uploads (files were injected by script), screen readers, Safari/Firefox, very large files, concurrent users.
+10. The Evaluation artifacts were generated against the local data in `data/eval_sets` (git-ignored); regenerating them needs `scripts/fetch_eval_data.py` and `scripts/compare_detectors.py` first.
 
 ## Exact next steps
 ```bash
-cd ~/code/verityai
-source .venv/bin/activate            # or: uv venv --python 3.11 .venv && uv pip install -r requirements.txt
-pytest tests/ -v                      # expect 42 passed
-python scripts/verify_pipeline.py     # expect ALL PASS (needs network on first run)
-streamlit run app.py
+cd ~/code/verityai && source .venv/bin/activate
+pip install -r requirements-api.txt          # adds FastAPI to the existing environment
+pytest tests/ -q                             # expect 80 passed
+python scripts/verify_api.py                 # real models, expect ALL PASS
+uvicorn api.main:app --port 8000             # open http://localhost:8000/product/
+cd web && npm install && npm run lint && npm run typecheck && npm test && npm run build
 ```
-Then follow **README → Deployment** step by step. After the first Cloud
-deploy, record the build log's torch version, the app's memory behavior, and
-the results of the step 5 checks here before claiming it is deployed.
+Then deploy per README → "Deploy on Streamlit Community Cloud" (main file `product/server.py`, Python 3.11) and
+record what the Cloud build log and the live URL actually show before calling it deployed. After that, the highest
+value work is a modern-generator evaluation set and detector.

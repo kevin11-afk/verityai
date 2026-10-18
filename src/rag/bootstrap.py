@@ -15,9 +15,12 @@ from src.rag.vector_store import VectorStore
 
 def ensure_index_built(store: VectorStore) -> int:
     """Index knowledge_base/ if the store is empty. Returns chunks added."""
-    if store.count() > 0:
+    if store.count() > 0 and not store.stale():
         return 0
     chunks = []
     for doc in load_knowledge_base_directory(config.KNOWLEDGE_BASE_DIR):
         chunks.extend(chunk_document(doc))
+    if store.count() > 0:  # stale index from an older chunker
+        store.rebuild(chunks)
+        return store.count()
     return store.add_chunks(chunks) if chunks else 0

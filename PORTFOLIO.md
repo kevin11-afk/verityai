@@ -22,8 +22,8 @@ without having run it.
 | Streamlit UI — all 6 pages | ✅ | ✅ (all load; Image, Video, Research flows exercised) |
 | Tests (`tests/`) | ✅ | ✅ (42 passed, 0 skipped, Python 3.11) |
 | Evaluation script | ✅ | ◑ (runs and prints "Not evaluated"; no labeled data) |
-| GitHub push | ⬜ | ⬜ |
-| Streamlit Community Cloud deployment | ⬜ | ⬜ |
+| GitHub push | ✅ | ✅ (github.com/kevin11-afk/verityai; local doc commits may be ahead) |
+| Streamlit Community Cloud deployment | ✅ | ◑ (verityai.streamlit.app live; image, report, research verified; video untested) |
 
 **Why some things say "code written, not verified running":** this
 project was built in a cloud sandbox with no network access to PyPI or
@@ -49,6 +49,15 @@ listed in `TRANSFER.md`. **Detector accuracy was first measured on
 2026-10-18 on a 200-image sample** (AUC 0.85, ~77% accuracy, ~21% of real
 photos flagged as AI): see `EVALUATION.md`. Quote those numbers only with
 their caveats; the sample is small and single-dataset.
+
+## Product UI (React + FastAPI), branch `feature/premium-react-frontend`
+
+| Feature | Code written | Verified |
+|---|---|---|
+| FastAPI backend (health, analysis, reports, research, KB, evaluation) | ✅ | ✅ 24/24 real-model checks, 15 API tests |
+| React app: Overview, Analyze, Report, Reports, Research, Knowledge, Evaluation lab, Methodology | ✅ | ✅ in a real browser against the real API, incl. mobile |
+| Evaluation artifacts (detector ROC/PR/calibration/CI, RAG Hit@k/MRR/abstention) | ✅ | ✅ computed from real scores |
+| Deployment of the new UI | config written | ⬜ not deployed; Streamlit Cloud `st.App` route untested on Cloud |
 
 ## Two-minute demo script
 
@@ -106,7 +115,7 @@ their caveats; the sample is small and single-dataset.
 
 ## What's NOT done / known gaps
 
-- Not yet pushed to GitHub or deployed (see README "Deployment").
+- Deployed, but video analysis and long-run memory on Cloud are unverified (see TRANSFER.md).
 - Full `pytest` run with real dependencies pending (sandbox network
   constraint — see status table above).
 - `scripts/evaluate.py` has not been run against real labeled data; no

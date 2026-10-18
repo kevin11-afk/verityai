@@ -1,0 +1,29 @@
+# Dependencies for the free Streamlit Community Cloud deployment of the React + FastAPI product
+# (entry point: product/server.py). Streamlit Cloud reads the requirements.txt that sits next to
+# the entry point first, so the original Streamlit app's root requirements.txt is untouched.
+
+# CPU-only torch wheels on Linux hosts (the default Linux wheel pulls multi-GB CUDA libraries).
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+streamlit==1.66.0
+fastapi==0.143.3
+uvicorn==0.54.0
+python-multipart==0.0.32
+
+# Detector
+torch==2.4.1
+transformers==4.44.2
+pillow==10.4.0
+opencv-python-headless==4.10.0.84
+
+# RAG
+sentence-transformers==3.0.1
+chromadb==0.5.5
+posthog==5.4.0  # chromadb 0.5.5's telemetry breaks with posthog>=6
+rank-bm25==0.2.2
+pymupdf==1.24.10
+
+# Shared / evaluation
+numpy==1.26.4
+scikit-learn==1.5.1
+pandas==2.2.2

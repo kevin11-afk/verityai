@@ -1,0 +1,11 @@
+.git
+.venv
+web/node_modules
+chroma_db
+data/eval_sets
+data/history
+data/kb_uploads
+data/tmp
+__pycache__
+*.pyc
+.pytest_cache
