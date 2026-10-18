@@ -86,16 +86,16 @@ class HybridRetriever:
         candidates.sort(key=lambda x: x[1], reverse=True)
         return [cid for cid, _ in candidates[:top_k]]
 
-    def _vector_ranked_ids(self, query: str, top_k: int) -> List[str]:
-        if self._store.count() == 0:
-            return []
-        results = self._store.query(query, top_k=top_k)
-        ids = results.get("ids", [[]])
-        return ids[0] if ids else []
-
     def retrieve(self, query: str, top_k: int = config.RETRIEVAL_TOP_K) -> List[EvidencePassage]:
         fetch_k = max(top_k * 3, 10)  # overfetch each retriever before fusing
-        vector_ids = self._vector_ranked_ids(query, fetch_k)
+        if self._store.count() == 0:
+            return []
+        vec_results = self._store.query(query, top_k=fetch_k)
+        vec_ids_list = vec_results.get("ids", [[]])[0]
+        distances = vec_results.get("distances", [[]])[0]
+        if not vec_ids_list or min(distances) > config.MAX_BEST_VECTOR_DISTANCE:
+            return []  # outside the knowledge base: let callers report insufficient evidence
+        vector_ids = vec_ids_list
         bm25_ids = self._bm25_ranked_ids(query, fetch_k)
 
         vector_rank = {cid: i + 1 for i, cid in enumerate(vector_ids)}
@@ -119,15 +119,11 @@ class HybridRetriever:
         # Need text/metadata for ids that only came from the vector retriever's
         # fetch, which already has it; fall back to the store for anything else.
         passages = []
-        vector_result_cache = {}
-        if vector_ids:
-            vec_results = self._store.query(query, top_k=fetch_k)
-            vec_docs = vec_results.get("documents", [[]])[0]
-            vec_metas = vec_results.get("metadatas", [[]])[0]
-            vec_ids_list = vec_results.get("ids", [[]])[0]
-            vector_result_cache = {
-                cid: (doc, meta) for cid, doc, meta in zip(vec_ids_list, vec_docs, vec_metas)
-            }
+        vec_docs = vec_results.get("documents", [[]])[0]
+        vec_metas = vec_results.get("metadatas", [[]])[0]
+        vector_result_cache = {
+            cid: (doc, meta) for cid, doc, meta in zip(vec_ids_list, vec_docs, vec_metas)
+        }
 
         for cid, rrf_score in top_ids:
             if cid in vector_result_cache:

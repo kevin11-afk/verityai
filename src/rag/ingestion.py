@@ -111,6 +111,8 @@ def load_knowledge_base_directory(directory: Path) -> List[LoadedDocument]:
             continue
         if path.suffix.lower() == ".url":
             continue
+        if path.parent == directory and path.name.lower() == "readme.md":
+            continue  # the folder's own how-to is documentation, not a citable source
         try:
             documents.append(load_document(path))
         except ValueError as exc:

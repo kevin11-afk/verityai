@@ -174,3 +174,27 @@ class TestBootstrap:
             added = ensure_index_built(vector_store)
             assert added > 0 and vector_store.count() == added
             assert ensure_index_built(vector_store) == 0  # no-op when already populated
+
+
+class TestRelevanceGate:
+    def test_query_beyond_distance_threshold_returns_nothing(self, vector_store, monkeypatch):
+        from src import config
+        from src.rag.retrieval import HybridRetriever
+
+        chunk = Chunk("c1", "Diffusion artifacts evidence.", "T", None, 1, "d.pdf")
+        with patch("src.rag.vector_store.embed_texts", side_effect=_fake_embed):
+            vector_store.add_chunks([chunk])
+            retriever = HybridRetriever(vector_store)
+            assert retriever.retrieve("Diffusion artifacts evidence.", top_k=3)  # identical text: passes
+            monkeypatch.setattr(config, "MAX_BEST_VECTOR_DISTANCE", -1.0)  # nothing can pass
+            assert retriever.retrieve("Diffusion artifacts evidence.", top_k=3) == []
+
+
+class TestKnowledgeBaseLoading:
+    def test_folder_readme_is_not_indexed_but_nested_docs_are(self, tmp_path):
+        from src.rag.ingestion import load_knowledge_base_directory
+
+        (tmp_path / "README.md").write_text("# How to add docs")
+        (tmp_path / "paper.md").write_text("# Paper\n\nContent.")
+        names = {d.source_path.name for d in load_knowledge_base_directory(tmp_path)}
+        assert names == {"paper.md"}

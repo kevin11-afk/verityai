@@ -20,7 +20,7 @@ without having run it.
 | Evidence-grounded explanation templates | ✅ | ✅ (grounding/citation logic unit-tested, passed) |
 | 6 seed knowledge-base documents, real citations | ✅ | — (fact-checked against live sources during writing) |
 | Streamlit UI — all 6 pages | ✅ | ✅ (all load; Image, Video, Research flows exercised) |
-| Tests (`tests/`) | ✅ | ✅ (40 passed, 0 skipped, Python 3.11) |
+| Tests (`tests/`) | ✅ | ✅ (42 passed, 0 skipped, Python 3.11) |
 | Evaluation script | ✅ | ◑ (runs and prints "Not evaluated"; no labeled data) |
 | GitHub push | ⬜ | ⬜ |
 | Streamlit Community Cloud deployment | ⬜ | ⬜ |
@@ -90,7 +90,7 @@ their caveats; the sample is small and single-dataset.
 > risk in the explanation step — every claim either comes from the
 > model's own scores (computed in code) or is a direct quote with a
 > citation. The interesting engineering constraint was the hosting
-> budget: Streamlit Community Cloud's free tier gives about 1GB RAM, so
+> budget: Streamlit Community Cloud's free tier has a limited per-app RAM budget, so
 > the model choice was driven as much by parameter count and license as
 > by accuracy — see `knowledge_base/04_detector_model_cards.md` for the
 > comparison I did against three other candidates.

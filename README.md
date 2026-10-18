@@ -101,7 +101,7 @@ choice — see `knowledge_base/04_detector_model_cards.md` for the full
 comparison (license, size, training data, and why each was or wasn't
 selected). The short version: Apache-2.0 licensing and the smallest
 parameter count (best fit for an 8GB-RAM laptop and Streamlit Community
-Cloud's ~1GB-RAM free tier) decided it.
+Cloud's limited-RAM free tier) decided it.
 
 **Decision policy** (fixed, documented, not tuned on this project's own
 data — see `src/config.py`):
@@ -175,7 +175,7 @@ production app**), chunking and citation-metadata preservation, BM25 and
 vector and hybrid (RRF) retrieval, missing-evidence handling, and report
 generation/serialization.
 
-> **Status:** the full suite (40 tests, including retrieval against real
+> **Status:** the full suite (42 tests, including retrieval against real
 > ChromaDB and BM25) passes on Python 3.11 / macOS arm64 from a clean
 > install of `requirements.txt`. Mocks are used only for the model in unit
 > tests; see `TRANSFER.md` for what was and wasn't verified end to end.
@@ -218,46 +218,49 @@ evaluation now."
 
 ## Deployment (Streamlit Community Cloud)
 
-Verified free-tier facts at the time of writing (re-check before you
-deploy, as free-tier terms can change): **free**, GitHub-account sign-in,
-**no credit card**, **~1GB RAM** per app, unlimited public apps + 1 private
-app, apps sleep after ~12 hours without traffic.
+**Status: not yet deployed.** Everything below the line "Verified locally"
+was run on a Mac; the Cloud steps themselves have never been executed.
 
-1. Push this repository to GitHub (public, so the free tier's unlimited
-   public-app allowance applies).
+Free-tier facts (per the Streamlit docs when last checked, 2026-10-18; they
+can change without notice, so re-check): free, GitHub sign-in, no credit
+card, per-app memory between **690 MB and 2.7 GB** (older sources say 1 GB),
+apps sleep after inactivity. Cloud installs `requirements.txt` with `uv`.
+
+**Verified locally (macOS arm64, Python 3.11, ₹0)**
+- `uv pip compile requirements.txt --python-platform x86_64-manylinux_2_28
+  --python-version 3.11` resolves for Linux, picks `torch==2.4.1+cpu`, and
+  pulls no CUDA/nvidia packages.
+- The running app, after image analysis, research retrieval and video
+  analysis in one process: ~650 MB RSS (~390 MB peak footprint).
+  `device="cpu"` is forced for embeddings so this matches a GPU-less host.
+  **Linux memory was not measured.** If Cloud enforces the 690 MB floor the
+  headroom is thin; at the 2.7 GB ceiling it is comfortable.
+- First start downloads two models (~200 MB) and builds the index (~30 s).
+
+**Steps**
+1. Create a free GitHub account if needed, create a **public** repo, then
+   from this folder:
+   ```bash
+   git branch -M main
+   git remote add origin https://github.com/<you>/verityai.git
+   git push -u origin main        # push the branch you want to deploy
+   ```
+   (Confirm `git ls-files` shows no `.venv/`, `chroma_db/`, `data/eval*`.)
 2. Go to [share.streamlit.io](https://share.streamlit.io), sign in with
-   GitHub, and click "New app."
-3. Select this repo, branch `main`, main file path `app.py`. Under
-   **Advanced settings**, choose **Python 3.11**.
-4. Deploy. First boot will be slow (~a few minutes) while it installs
-   dependencies and downloads the two models — this is expected.
-5. **RAM is tight at ~1GB.** If the app crashes or is OOM-killed on
-   first load:
-   - `requirements.txt` already carries `--extra-index-url
-     https://download.pytorch.org/whl/cpu` so Linux hosts should get the
-     CPU-only torch wheel. This has **not** been verified on Streamlit
-     Cloud; check the build log for a `+cpu` torch and, if the CUDA build
-     was installed instead, pin `torch==2.4.1+cpu` there.
-   - Measured locally (macOS arm64): detector + embedder + ChromaDB peak at
-     ~540 MB RSS before Streamlit's own overhead. That is under 1 GB but
-     with limited headroom; Linux numbers are unmeasured.
-   - As a fallback, disable video analysis on the hosted deployment (it
-     loads no extra model, but running multiple frames back-to-back adds
-     latency) by setting an environment variable the pages check, or
-     simply direct hosted users to the Image Analysis and Research
-     Assistant pages.
-   - This is disclosed here rather than hidden: a ~1GB free tier running
-     PyTorch + Transformers + Sentence-Transformers + ChromaDB
-     simultaneously is genuinely tight, and the honest fallback is
-     "works reliably locally; may need the above tuning when hosted."
-6. Once deployed, **test the public URL yourself** before sharing it:
-   upload a real image on Image Analysis, confirm a real prediction and
-   at least one cited passage appear, and ask a question on Research
-   Assistant. Do not claim the app is "deployed and working" until you've
-   done this.
-7. The knowledge-base index (`chroma_db/`) is built automatically on first
-   start if it is empty (`src/rag/bootstrap.py`, ~30 s the first time as
-   the embedding model downloads). No pre-built index needs to be committed.
+   GitHub, click **Create app**, and pick the repo, branch `main`, main file
+   `app.py`.
+3. Under **Advanced settings** choose **Python 3.11**. Do not add secrets;
+   none are needed.
+4. Deploy and watch the build log. Confirm that torch installs as `+cpu`
+   and that no `nvidia-*` packages appear. If the build fails or the app is
+   restarted for memory, check **Manage app → logs**.
+5. **Test the public URL before calling it deployed**: upload a real image
+   (expect a prediction, scores and cited passages), download both reports,
+   ask an on-topic and an off-topic question in Research Assistant, and try
+   a short video.
+6. If memory is exceeded, the options are to remove the Video page (delete
+   `pages/2_Video_Analysis.py`), or switch the detector to ONNX Runtime
+   (see Future improvements). There is no setting to disable video.
 
 ## Privacy and security notes
 
@@ -279,6 +282,10 @@ app, apps sleep after ~12 hours without traffic.
 
 ## Known limitations
 
+- **Detector accuracy is moderate** (ROC-AUC ≈ 0.85, ~21% of real photos
+  flagged as AI on a 200-image sample; see `EVALUATION.md`).
+- The relevance gate (`MAX_BEST_VECTOR_DISTANCE`, 0.65) was calibrated on
+  18 queries against this small knowledge base; re-check it if you add documents.
 - The image detector is a single pretrained binary classifier, not an
   ensemble, and has not been independently re-evaluated by this project
   on a fresh out-of-distribution test set — see the Evaluation Dashboard
@@ -291,7 +298,7 @@ app, apps sleep after ~12 hours without traffic.
   than guess on anything outside it.
 - No face-specific or deepfake-specific model is bundled; the detector is
   a general real-vs-AI image classifier.
-- Streamlit Community Cloud's ~1GB RAM is tight for this stack — see
+- Streamlit Community Cloud's memory limit (690 MB–2.7 GB per the docs) may be tight for this stack — see
   "Deployment" above.
 
 ## Future improvements

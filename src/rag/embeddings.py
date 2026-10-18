@@ -28,7 +28,9 @@ def _load_model():
             "sentence-transformers is not installed. Run: pip install -r requirements.txt"
         ) from exc
     try:
-        return SentenceTransformer(config.EMBEDDING_MODEL_NAME)
+        # CPU explicitly: matches the free hosting tier (no GPU) and stops
+        # sentence-transformers auto-selecting Apple MPS (~1 GB extra GPU memory).
+        return SentenceTransformer(config.EMBEDDING_MODEL_NAME, device="cpu")
     except Exception as exc:  # noqa: BLE001
         raise EmbeddingUnavailableError(
             f"Could not load embedding model '{config.EMBEDDING_MODEL_NAME}': {exc}"

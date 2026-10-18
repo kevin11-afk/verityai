@@ -55,14 +55,16 @@ if uploaded is None:
 file_bytes = uploaded.getvalue()
 validation_result = validation.validate_image_bytes(file_bytes, uploaded.name)
 
+if not validation_result.ok:
+    # Validate BEFORE any rendering: st.image would raise on a non-image file.
+    st.error(f"❌ Validation failed: {validation_result.reason}")
+    st.stop()
+
 col_preview, col_status = st.columns([1, 1])
 with col_preview:
     st.image(file_bytes, caption=uploaded.name, use_column_width=True)
 
 with col_status:
-    if not validation_result.ok:
-        st.error(f"❌ Validation failed: {validation_result.reason}")
-        st.stop()
     st.success("✅ File validated")
     st.markdown(
         f"- **Detected type:** {validation_result.detected_mime}\n"

@@ -63,6 +63,12 @@ CHROMA_COLLECTION_NAME = "verityai_knowledge_base"
 CHUNK_SIZE_CHARS = int(os.environ.get("VERITYAI_CHUNK_SIZE", "1000"))
 CHUNK_OVERLAP_CHARS = int(os.environ.get("VERITYAI_CHUNK_OVERLAP", "150"))
 RETRIEVAL_TOP_K = int(os.environ.get("VERITYAI_TOP_K", "5"))
+# Relevance gate: if even the best vector match is farther than this (cosine
+# distance, 0 = identical), the query is treated as outside the knowledge base
+# and NO passages are returned, so the app says "insufficient evidence" instead
+# of citing unrelated text. Calibrated on 18 queries against the starter KB
+# (on-topic best distance <= 0.54, off-topic >= 0.72); re-check if the KB grows.
+MAX_BEST_VECTOR_DISTANCE = float(os.environ.get("VERITYAI_MAX_DISTANCE", "0.65"))
 RRF_K_CONSTANT = 60  # standard Reciprocal Rank Fusion smoothing constant
 
 # --------------------------------------------------------------------------

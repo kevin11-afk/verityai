@@ -1,192 +1,114 @@
-# VerityAI — transfer notes
+# VerityAI: handoff and status
 
-Written 2026-10-18 while packaging the project for continued development
-with Claude Code on macOS. This file records what is actually known to
-work, not what is intended to work. See `PORTFOLIO.md` for the feature
-checklist and `README.md` for full setup instructions.
+Last updated 2026-10-18. This records what was actually run, not what is
+intended. Companion docs: `README.md` (setup, deployment), `EVALUATION.md`
+(detector accuracy), `PORTFOLIO.md` (feature checklist).
 
-## Where this package came from
+**Bottom line:** the app works end to end locally on macOS. It is **not
+deployed**, the Streamlit Cloud steps have never been run, and detector
+accuracy is only moderate. It is ready to attempt a free deployment, with the
+caveats in "Remaining issues".
 
-- The project was built in a cloud sandbox at `/home/claude/verityai`
-  that had no access to PyPI or Hugging Face Hub, so the heavy
-  dependencies were never installed there.
-- The sandbox's export (`verityai_project.tar.gz` plus
-  `verityai_git_history.bundle`) was then copied to
-  `~/Documents/` on the Mac and extracted to `~/Documents/verityai`.
-- This package is built from the **Git bundle**, which has the full
-  history (one commit, `aa111b2`, branch `master`) and the same files as
-  the tarball.
-- The extracted copy at `~/Documents/verityai` is **missing
-  `tests/test_validation.py`** and has **no `.git` directory of its own**.
-  It sits inside a Git repository rooted at the home directory, which
-  belongs to an unrelated project. Use this package rather than that copy.
+## Provenance
+Built in a network-less cloud sandbox, exported as a Git bundle, and cloned
+to `~/code/verityai`. History: `aa111b2` (scaffold), `25218c2` (first
+TRANSFER.md), then the verification and fix commits on branch
+`fix/real-env-setup`. The default branch in the bundle was `master`; this
+clone renamed it to `main`.
 
-## Project status (honest summary)
-
-| Area | Status |
+## Test results (macOS arm64, Python 3.11.15, fresh `uv` venv)
+| Check | Result |
 |---|---|
-| Source code (app, 5 pages, `src/`, scripts) | Written. All files compile under Python 3.12. |
-| Unit tests | **30 passed, 1 skipped** on the Mac (Python 3.12.4, pytest 9.1.1) |
-| `_smoke_test.py` | **12/12 passed** on the Mac |
-| Retrieval tests (`tests/test_retrieval.py`) | **Skipped, not run**: `chromadb` and `rank_bm25` aren't installed |
-| Real model inference | **Not run anywhere yet** |
-| `streamlit run app.py` end-to-end | **Not run yet** |
-| Knowledge-base ingestion (`scripts/ingest_documents.py`) | **Not run yet** |
-| Evaluation (`scripts/evaluate.py`) | **Not run**: no labeled data exists |
-| GitHub push | Not done |
-| Streamlit Community Cloud deployment | **Not deployed** |
+| `pytest tests/` | **42 passed, 0 skipped** (includes real ChromaDB and BM25 retrieval) |
+| `python _smoke_test.py` | 12/12 passed |
+| Clean-room install from `requirements.txt` alone, then `pytest` | 40/40 at that time (before 2 later tests were added) |
+| `python scripts/verify_pipeline.py` (real models and real index) | **26/26 checks passed** |
+| Linux dependency resolution (`uv pip compile`, manylinux, py3.11) | Resolves; `torch==2.4.1+cpu`, no CUDA packages |
 
-The application is **not fully tested** and **not deployed**.
+`verify_pipeline.py` checks:
+- The detector's real labels are `{0: 'real', 1: 'ai'}` and its scores sum to 1.
+- All 6 knowledge-base files are indexed (34 chunks).
+- 5 topical queries find the right source file in the top 5, with both BM25
+  and vector ranks populated.
+- Every retrieved passage's text really occurs in its claimed source file.
+- Citations equal the retrieved passages, in order.
+- Quoted findings come from the retrieved text.
+- The detector summary reports exactly the model's scores and category.
+- Empty evidence yields an explicit notice, with no citations.
+- An off-topic query returns no passages.
 
-## Completed features (code written)
+## App workflows exercised in the browser pane
+Run against `streamlit run app.py`. Files were injected into the uploader by
+script, not through a native file picker.
+- **Image Analysis:** upload, validation, real inference, scores, cited
+  explanation, and both report downloads. The JSON and Markdown report
+  endpoints returned HTTP 200 with correct content and filenames. The
+  browser pane doesn't save files to disk, so the saved-file step is untested.
+- **Invalid upload** (a text file named `.jpg`): rejected with a clear
+  message and no crash. This was a bug that is now fixed.
+- **Research Assistant:** an on-topic question returned cited passages from
+  the right file. An off-topic question returned the explicit
+  "insufficient evidence" message.
+- **Video Analysis (experimental):** one generated 4 s MP4 produced 8 sampled
+  frames, an aggregate result, citations, and report buttons. Not tested on a
+  real-world video.
+- Home, About and Evaluation pages load without exceptions.
 
-- Image upload with validation (extension, magic bytes, size, dimensions)
-  and path-traversal-safe temp files. Unit-tested.
-- Detector wrapper with a fixed decision policy (`P ≥ 0.65` → suspected,
-  otherwise Inconclusive). The policy logic is unit-tested against
-  mocked model outputs.
-- Experimental video analysis: OpenCV frame sampling (≤8 frames, ≤30 s)
-  and mean aggregation of per-frame image scores.
-- RAG pipeline: PDF/TXT/MD ingestion, chunking with citation metadata,
-  ChromaDB vector store, BM25, Reciprocal Rank Fusion, and deterministic
-  template explanations. There is no LLM anywhere.
-- JSON/Markdown report generation. Unit-tested.
-- Streamlit UI: Home, Image Analysis, Video Analysis, Research
-  Assistant, Evaluation, and About.
-- 6 knowledge-base documents in `knowledge_base/`.
+## Bugs found and fixed on `fix/real-env-setup`
+1. The pipeline applied sigmoid instead of the documented softmax, so scores didn't sum to 1. Now explicit softmax.
+2. `st.image(use_container_width=...)` isn't supported by pinned Streamlit 1.39 and crashed every upload.
+3. The image preview was drawn before validation, so an invalid file crashed the page.
+4. BM25 `score > 0` dropped real matches on small corpora. Now filters on token overlap.
+5. The retriever queried the vector store twice. Now once.
+6. Off-topic questions still returned five cited passages. Added a relevance gate (`MAX_BEST_VECTOR_DISTANCE`, default 0.65, env `VERITYAI_MAX_DISTANCE`).
+7. `knowledge_base/README.md` was indexed and could be cited as a source. Now excluded.
+8. A flaky retrieval test used Python's per-process `hash()`. Now `zlib.crc32`.
+9. chromadb telemetry broke with posthog ≥ 6 and logged errors. Pinned `posthog==5.4.0` and disabled telemetry.
+10. A fresh deploy had no index. `src/rag/bootstrap.py` builds it on first start.
+11. Embeddings auto-selected Apple MPS (about 1 GB of extra GPU memory locally). Now forced to CPU, matching the hosting tier.
+12. Added the CPU torch `--extra-index-url` to `requirements.txt`.
+13. The README claimed an environment variable to disable video that doesn't exist. Removed the claim.
 
-## Untested features
+## Git hygiene (verified)
+Across all history, no images, videos, model weights, databases, caches,
+virtualenvs, `data/tmp` or eval files, `secrets.toml` or key-like strings
+were ever committed. 50 tracked files, the largest 16 KB. `.venv/`,
+`chroma_db/`, `data/tmp/` and `data/eval*/` are git-ignored and exist only
+locally.
 
-- Real detector inference: the `transformers` pipeline loading
-  `Nahrawy/AIorNot`.
-- Embeddings (`sentence-transformers`), the ChromaDB store, BM25, and
-  hybrid retrieval against a real index.
-- PDF ingestion (`pymupdf`).
-- Every Streamlit page in a running app, including the report download
-  buttons.
-- Video analysis on a real `.mp4` or `.mov` file.
-- The evaluation script and dashboard.
-- Behaviour within Streamlit Cloud's ~1 GB RAM limit.
+## Detector
+`Nahrawy/AIorNot` (Swin-Tiny, Apache-2.0), kept after comparing three
+alternatives (`EVALUATION.md`). On 200 images from one dataset: ROC-AUC 0.85,
+~77% accuracy, ~21% of real photos flagged as AI, ~25% of AI images missed at
+the 0.65 policy. Embeddings: `sentence-transformers/all-MiniLM-L6-v2` (CPU).
 
-## Known errors and risks
+## Memory and requirements vs. the free tier
+- Streamlit docs (checked 2026-10-18): 690 MB to 2.7 GB per app, subject to change.
+- Measured locally after image, research and video in one process: ~650 MB RSS,
+  ~390 MB peak footprint. **Linux was not measured.** At the 690 MB floor the
+  headroom is thin.
+- Cloud installs `requirements.txt` with uv, which resolved the CPU torch
+  wheel in my Linux dry run. The actual Cloud build has not been run.
+- Budget: nothing here uses a paid API, paid hosting, or any billing account.
 
-No failing tests are currently known. These are open risks, not
-confirmed bugs:
+## Remaining issues
+1. **Not deployed.** The GitHub push and the Streamlit Cloud build and run are untested.
+2. **Linux and Cloud memory unmeasured.**
+3. **Detector accuracy is moderate.** The evaluation sample is small (200 images) and covers one dataset.
+4. **Retrieval quality unmeasured.** The relevance gate was calibrated on only 18 queries against a 6-document knowledge base.
+5. Saved report files weren't opened from disk; only the served content was checked.
+6. Video was tested on one synthetic clip only.
+7. Cosmetic: retrieved quotes can show raw Markdown `#` headings; the video explanation text says "this image"; pytest shows chromadb/pydantic deprecation warnings.
+8. The dataset used for evaluation states no license. It is kept local and git-ignored.
 
-1. **Detector label names are unverified.** `src/detector/image_detector.py`
-   lowercases the pipeline labels and looks for `ai` and `real`. If the
-   `Nahrawy/AIorNot` model config uses other label names (for example
-   `LABEL_0`/`LABEL_1`), the scores fall back to 0 and every result
-   becomes "Inconclusive" without any error. Check
-   `model.config.id2label` on the first real run.
-2. **Python version mismatch.** The README targets Python 3.10–3.11. The
-   Mac has 3.12.4, and the pinned `torch==2.4.1`, `chromadb==0.5.5`, and
-   `numpy==1.26.4` may not all have 3.12 wheels or work together on it.
-   Using a 3.11 venv is the safer choice.
-3. **Mixed system packages.** The Mac's system Python already has `torch`
-   and `streamlit` at unknown versions that may not match the pins.
-   Always work inside a fresh venv.
-4. **Deployment RAM.** PyTorch, Transformers, Sentence-Transformers, and
-   ChromaDB together may exceed Streamlit Cloud's free-tier RAM limit.
-5. **No pre-built index.** `chroma_db/` is gitignored, so a deployment
-   must either build the index at startup or commit one (see README
-   "Deployment", step 7).
-
-## Selected detector
-
-**`Nahrawy/AIorNot`**: a Swin-Tiny fine-tune (~28M params, Apache-2.0)
-trained on the "aiornot" dataset. It was chosen over
-`umm-maybe/AI-image-detector`, `Organika/sdxl-detector`, and
-`dima806/ai_vs_real_image_detection` for its license and small size.
-See `knowledge_base/04_detector_model_cards.md` and `src/config.py`. You
-can override it with the `VERITYAI_DETECTOR_MODEL` environment variable.
-Known limitation: its training data predates 2024.
-
-Embeddings model: `sentence-transformers/all-MiniLM-L6-v2`.
-
-## What was excluded from this package
-
-Virtual environments, `__pycache__`, `.pytest_cache`, Hugging Face model
-caches and weights, `chroma_db/`, `data/tmp/`, `data/uploads/`, and
-`.streamlit/secrets.toml`. None of these existed in the repo, and no
-secrets were found in the source.
-
-## Exact next steps (on the Mac)
-
+## Exact next steps
 ```bash
-# 0. Unpack (or clone from the bundle) into a clean folder
-mkdir -p ~/code && cd ~/code
-unzip ~/Documents/verityai_transfer/verityai_transfer.zip   # creates ./verityai with .git
-#   or: git clone ~/Documents/verityai_transfer/verityai.bundle verityai
-cd verityai
-git log --oneline            # expect the scaffold commit + the transfer commit
-
-# 1. Python 3.11 venv (install with: brew install python@3.11)
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install torch==2.4.1      # on macOS the default wheel is CPU/MPS; the README's --index-url .../cpu line is for Linux
-pip install -r requirements.txt
-
-# 2. Full test suite, which should now include test_retrieval.py
-pytest tests/ -v
-
-# 3. Check the detector's label names (risk #1)
-python -c "from transformers import AutoConfig; print(AutoConfig.from_pretrained('Nahrawy/AIorNot').id2label)"
-
-# 4. Build the knowledge-base index
-python scripts/ingest_documents.py
-python scripts/ingest_documents.py --debug "why do detectors fail on new generators"
-
-# 5. Run the app and test each page by hand
+cd ~/code/verityai
+source .venv/bin/activate            # or: uv venv --python 3.11 .venv && uv pip install -r requirements.txt
+pytest tests/ -v                      # expect 42 passed
+python scripts/verify_pipeline.py     # expect ALL PASS (needs network on first run)
 streamlit run app.py
 ```
-
-Then:
-
-6. Update the "Verified running" column in `PORTFOLIO.md` for each item
-   you actually verified.
-7. Optionally delete `_smoke_test.py` once `pytest` covers the same checks.
-8. Create a GitHub repo and push. The default branch is `master`; rename
-   it to `main` with `git branch -m main` if you follow the README's
-   deployment steps.
-9. Deploy to Streamlit Community Cloud using README "Deployment", then
-   test the public URL before calling it deployed.
-10. Optionally, add labeled data to `data/eval/` and run
-    `python scripts/evaluate.py`.
-
----
-
-## Update 2026-10-18: first real-environment verification
-
-Environment: macOS arm64, Python 3.11.15 (via `uv venv --python 3.11`),
-a fresh venv installed from `requirements.txt`, all free/local, ₹0.
-
-**Verified by running it**
-- Clean-room install from `requirements.txt` alone, then `pytest`: **40 passed, 0 skipped** (retrieval tests now run).
-- `Nahrawy/AIorNot` downloaded and loaded; `id2label = {0: 'real', 1: 'ai'}`, so risk #1 above is cleared.
-- Real inference on three sample photos, a noise image, and an 8-frame video sample.
-- `ingest_documents.py`: 37 chunks indexed with real embeddings; ChromaDB + BM25 + RRF return results with both ranks populated.
-- Streamlit app: Home, About, Evaluation, Video, Image, and Research Assistant pages loaded without exceptions. Image Analysis, Video Analysis, and Research Assistant were exercised through the browser. Files were injected into the uploader by script rather than with a real file picker.
-- `scripts/evaluate.py` runs and correctly prints "Not evaluated".
-
-**Bugs found and fixed (branch `fix/real-env-setup`)**
-1. The pipeline applied an independent **sigmoid**, not softmax, so scores didn't sum to 1 and contradicted the documented policy. Fixed with `function_to_apply="softmax"` in `src/detector/image_detector.py`. Decision-policy outcomes change as a result.
-2. `st.image(use_container_width=...)` isn't supported by pinned Streamlit 1.39, which crashed Image Analysis on every upload. Now `use_column_width`.
-3. BM25 filter `score > 0` dropped real keyword matches on small corpora, because rank_bm25's IDF is ≤ 0 for terms in about half the documents. Now filters on token overlap.
-4. A retrieval test was non-deterministic: it used Python's per-process `hash()` for fake embeddings. Now uses `zlib.crc32`.
-5. chromadb 0.5.5 telemetry broke with posthog ≥ 6 and logged errors on every call. Pinned `posthog==5.4.0` and disabled telemetry.
-6. A fresh deploy had no index (`chroma_db/` is gitignored). Added `src/rag/bootstrap.py`, which builds it on first start. It has a unit test.
-7. Added `--extra-index-url` for CPU torch to `requirements.txt` for Linux hosts.
-
-**Still incomplete or unverified**
-- **Detector accuracy is moderate**, now measured (see `EVALUATION.md`): AUC 0.85 and ~77% accuracy on 200 images from one dataset, with ~21% of real photos flagged as AI at the 0.65 policy. The detector and thresholds were kept after comparing three other models and a split-half threshold check. The sample is small, so treat the numbers as indicative.
-- Retrieval quality is unmeasured (no `rag_eval.jsonl`).
-- Downloaded JSON/Markdown report files were not opened (the buttons render).
-- Video was tested only on a synthetic MP4 built from still photos.
-- Streamlit Community Cloud: **not deployed, and the deployment config is untested there.** Unverified: the CPU torch wheel being selected, the RAM limit (peak ~540 MB locally for models, excluding Streamlit), and cold-start time.
-- Cosmetic: retrieved quotes show raw Markdown `#` headings; video explanation text says "this image".
-- A secondary `pytest` DeprecationWarning from chromadb/pydantic (harmless).
-
-## Update: detector evaluation
-Added `EVALUATION.md`, `scripts/fetch_eval_data.py`, `scripts/compare_detectors.py`, `scripts/normalize_eval_set.py`; `scripts/evaluate.py` now takes an optional image-directory argument. Evaluation data goes in `data/eval_sets/` (git-ignored). RAG retrieval quality is still unmeasured.
+Then follow **README → Deployment** step by step. After the first Cloud
+deploy, record the build log's torch version, the app's memory behavior, and
+the results of the step 5 checks here before claiming it is deployed.
