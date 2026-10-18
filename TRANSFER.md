@@ -91,6 +91,13 @@ the 0.65 policy. Embeddings: `sentence-transformers/all-MiniLM-L6-v2` (CPU).
   wheel in my Linux dry run. The actual Cloud build has not been run.
 - Budget: nothing here uses a paid API, paid hosting, or any billing account.
 
+## First Cloud deploy attempt (2026-10-18): failed, cause identified
+Build log showed `Using Python 3.14.8`: the Python version had not been set to
+3.11, and `torch==2.4.1` has no wheel for 3.14 (uv and pip both failed). Fix is
+to recreate the app with Advanced settings → Python 3.11. uv also reported a
+403 querying `download.pytorch.org/whl/cpu`; pip reached it fine, so the pip
+fallback should still work. Not yet re-run on 3.11.
+
 ## Remaining issues
 1. **Not deployed.** The GitHub push and the Streamlit Cloud build and run are untested.
 2. **Linux and Cloud memory unmeasured.**

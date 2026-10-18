@@ -249,8 +249,11 @@ apps sleep after inactivity. Cloud installs `requirements.txt` with `uv`.
 2. Go to [share.streamlit.io](https://share.streamlit.io), sign in with
    GitHub, click **Create app**, and pick the repo, branch `main`, main file
    `app.py`.
-3. Under **Advanced settings** choose **Python 3.11**. Do not add secrets;
-   none are needed.
+3. Under **Advanced settings** choose **Python 3.11** *before* clicking
+   Deploy. Cloud defaults to the newest Python (3.14 on 2026-10-18), where
+   the pinned `torch==2.4.1` has no wheel and the build fails with "No
+   matching distribution found for torch". If you missed it, delete the app
+   and recreate it. Do not add secrets; none are needed.
 4. Deploy and watch the build log. Confirm that torch installs as `+cpu`
    and that no `nvidia-*` packages appear. If the build fails or the app is
    restarted for memory, check **Manage app → logs**.
