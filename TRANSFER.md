@@ -4,10 +4,10 @@ Last updated 2026-10-18. This records what was actually run, not what is
 intended. Companion docs: `README.md` (setup, deployment), `EVALUATION.md`
 (detector accuracy), `PORTFOLIO.md` (feature checklist).
 
-**Bottom line:** the app works end to end locally on macOS. It is **not
-deployed**, the Streamlit Cloud steps have never been run, and detector
-accuracy is only moderate. It is ready to attempt a free deployment, with the
-caveats in "Remaining issues".
+**Bottom line:** the app works end to end locally on macOS **and is deployed**
+at https://verityai.streamlit.app (free Streamlit Community Cloud, public).
+Image analysis, report download and research retrieval were verified on the
+live URL; video was not. Detector accuracy is only moderate.
 
 ## Provenance
 Built in a network-less cloud sandbox, exported as a Git bundle, and cloned
@@ -91,16 +91,27 @@ the 0.65 policy. Embeddings: `sentence-transformers/all-MiniLM-L6-v2` (CPU).
   wheel in my Linux dry run. The actual Cloud build has not been run.
 - Budget: nothing here uses a paid API, paid hosting, or any billing account.
 
-## First Cloud deploy attempt (2026-10-18): failed, cause identified
-Build log showed `Using Python 3.14.8`: the Python version had not been set to
-3.11, and `torch==2.4.1` has no wheel for 3.14 (uv and pip both failed). Fix is
-to recreate the app with Advanced settings → Python 3.11. uv also reported a
-403 querying `download.pytorch.org/whl/cpu`; pip reached it fine, so the pip
-fallback should still work. Not yet re-run on 3.11.
+## Cloud deployment (2026-10-18)
+- **Attempt 1 failed:** build log showed `Using Python 3.14.8`. Python had not
+  been set to 3.11, and `torch==2.4.1` has no wheel for 3.14 (uv and pip both
+  failed). Fix: delete and recreate the app with Advanced settings → Python 3.11.
+- **Attempt 2 succeeded** (Python 3.11 selected). I did not see the build log, so
+  the torch build (`+cpu`) and final memory use are unconfirmed.
+- Verified on the live URL, via the browser pane: home page loads; Research
+  Assistant shows 34 chunks (index auto-built on first start) and returns cited
+  passages for an on-topic question; the off-topic question gets the
+  "insufficient evidence" notice; Image Analysis validated a (canvas-generated)
+  JPEG, ran real inference, showed 5 citations and 2 report buttons, and the
+  JSON report endpoint returned HTTP 200 with correct content.
+- **Not verified on the live URL:** Video Analysis, Evaluation, About, the
+  Markdown report, the saved-file step, sustained use or memory limits, and
+  sleep/wake behavior after inactivity.
+- Note: `curl` to the app URL needs a cookie jar and the health endpoint is not
+  informative behind Cloud's proxy; test in a browser instead.
 
 ## Remaining issues
-1. **Not deployed.** The GitHub push and the Streamlit Cloud build and run are untested.
-2. **Linux and Cloud memory unmeasured.**
+1. **Cloud memory and the torch build are unconfirmed** (build log not reviewed); watch for restarts under load.
+2. **Video Analysis untested on Cloud.**
 3. **Detector accuracy is moderate.** The evaluation sample is small (200 images) and covers one dataset.
 4. **Retrieval quality unmeasured.** The relevance gate was calibrated on only 18 queries against a 6-document knowledge base.
 5. Saved report files weren't opened from disk; only the served content was checked.

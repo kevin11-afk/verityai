@@ -218,8 +218,9 @@ evaluation now."
 
 ## Deployment (Streamlit Community Cloud)
 
-**Status: not yet deployed.** Everything below the line "Verified locally"
-was run on a Mac; the Cloud steps themselves have never been executed.
+**Status: deployed** at https://verityai.streamlit.app (2026-10-18). Image
+analysis, report download and research retrieval were checked on the live URL;
+video analysis was not. Memory and the torch build on Cloud are unconfirmed.
 
 Free-tier facts (per the Streamlit docs when last checked, 2026-10-18; they
 can change without notice, so re-check): free, GitHub sign-in, no credit
