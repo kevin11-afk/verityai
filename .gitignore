@@ -35,3 +35,12 @@ scripts/eval_results/
 # Local evaluation datasets (downloaded samples; never commit)
 data/eval/
 data/eval_sets/
+
+# Frontend
+web/node_modules/
+web/.vite/
+*.tsbuildinfo
+
+# Runtime data written by the API (uploaded knowledge-base documents and saved reports)
+data/kb_uploads/
+data/history/
