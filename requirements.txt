@@ -1,0 +1,25 @@
+# VerityAI — core dependencies
+# All packages are free/open-source. No paid API keys required.
+# Torch is pinned to the CPU-only build to keep install size and RAM small
+# (install separately first — see README "Installation" — pip's own
+# dependency resolver does not reliably pick the +cpu wheel on all platforms).
+
+streamlit==1.39.0
+
+# Detector
+torch==2.4.1
+transformers==4.44.2
+pillow==10.4.0
+opencv-python-headless==4.10.0.84
+
+# RAG
+sentence-transformers==3.0.1
+chromadb==0.5.5
+rank-bm25==0.2.2
+pymupdf==1.24.10
+
+# Shared / evaluation
+numpy==1.26.4
+scikit-learn==1.5.1
+pandas==2.2.2
+pytest==8.3.2

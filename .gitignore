@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Model + vector store caches (rebuilt locally, not committed)
+.cache/
+hf_cache/
+chroma_db/
+knowledge_base_index/
+
+# Uploaded / temp media (never commit user uploads)
+data/uploads/
+data/tmp/
+*.tmp
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Evaluation outputs that contain run-specific numbers
+scripts/eval_results/
