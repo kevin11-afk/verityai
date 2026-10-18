@@ -1,0 +1,44 @@
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3 { @apply text-ink; letter-spacing: -0.012em; }
+  :focus-visible { outline: 2px solid #3F3CBB; outline-offset: 2px; border-radius: 4px; }
+  ::selection { background: #DAD8F7; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  .tnum { font-variant-numeric: tabular-nums; }
+}
+
+@layer components {
+  .skeleton { @apply relative overflow-hidden rounded bg-sunken; }
+  .skeleton::after {
+    content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+  .eyebrow { @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3; }
+  .panel { @apply rounded-lg border border-line bg-surface shadow-panel; }
+  .link { @apply text-brand-ink underline decoration-brand/30 underline-offset-2 hover:decoration-brand; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+  .skeleton::after { display: none; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .panel { box-shadow: none; }
+  main { padding: 0 !important; }
+}
